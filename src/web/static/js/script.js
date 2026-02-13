@@ -36,8 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
             statusText.textContent = data.status;
             dateEl.textContent = `${data.date} ${data.day}`;
 
-            // Update duty teachers
-            dutyList.innerHTML = '';
             if (data.duty_teachers && data.duty_teachers.length > 0) {
                 data.duty_teachers.forEach(item => {
                     const li = document.createElement('li');
@@ -52,6 +50,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } else {
                 dutyList.innerHTML = '<li>Nöbetçi bulunamadı.</li>';
+            }
+
+            // --- CLASS STATUSES ---
+            // Find or create container
+            let classListContainer = document.getElementById('class-status-list');
+            if (!classListContainer) {
+                // Determine where to add it. Sidebar seems appropriate.
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    const h2 = document.createElement('h2');
+                    h2.textContent = '🏫 Sınıf Durumları';
+                    h2.style.marginTop = '20px';
+                    h2.style.borderBottom = '2px solid #fff';
+                    sidebar.appendChild(h2);
+
+                    classListContainer = document.createElement('ul');
+                    classListContainer.id = 'class-status-list';
+                    classListContainer.className = 'info-list';
+                    sidebar.appendChild(classListContainer);
+                }
+            }
+
+            if (classListContainer) {
+                classListContainer.innerHTML = '';
+                if (data.class_statuses && data.class_statuses.length > 0) {
+                    data.class_statuses.forEach(status => {
+                        const li = document.createElement('li');
+                        // Format: "9-A: MAT"
+                        const parts = status.split(':');
+                        if (parts.length === 2) {
+                            li.innerHTML = `<strong>${parts[0]}:</strong> ${parts[1]}`;
+                        } else {
+                            li.textContent = status;
+                        }
+                        classListContainer.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = 'Ders yok.';
+                    classListContainer.appendChild(li);
+                }
             }
 
             // Update daily message (random or first)

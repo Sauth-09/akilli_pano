@@ -76,30 +76,45 @@ def admin():
                 })
         data['schedule'] = new_schedule
         
-        # Duty Roster (Matrix)
-        locations = request.form.getlist('location[]')
-        mondays = request.form.getlist('Monday[]')
-        tuesdays = request.form.getlist('Tuesday[]')
-        wednesdays = request.form.getlist('Wednesday[]')
-        thursdays = request.form.getlist('Thursday[]')
-        fridays = request.form.getlist('Friday[]')
         
-        new_roster = []
-        for i, loc_name in enumerate(locations):
-            # Safe access to index
-            if i < len(mondays):
-                new_roster.append({
-                    "location": loc_name,
-                    "schedule": {
-                        "Monday": mondays[i],
-                        "Tuesday": tuesdays[i],
-                        "Wednesday": wednesdays[i],
-                        "Thursday": thursdays[i],
-                        "Friday": fridays[i]
-                    }
-                })
-        data['duty_roster'] = new_roster
+        # Class Schedules
+        # Since indices are dynamic, we iterate until we find no more classes
+        new_class_schedules = []
+        # Limiting to 50 classes to prevent infinite loops if something goes wrong
+        for i in range(50):
+            # Try to get class name field
+            class_name_key = f'class_name_{i}'
+            if class_name_key not in request.form:
+                # If we have gaps (deleted items), we might miss them if we break.
+                # But HTML logic puts them in sequential wrapper-ids usually.
+                # If dynamic JS deletion keeps old IDs, we might have gaps.
+                # Let's try checking a known range or iterating keys?
+                # Simpler: The sidebar has 'class_names[]'. iterating that won't give us keys.
+                # Let's rely on the assumption that we process what exists.
+                # But wait, JS 'add class' uses sequential IDs. 'Remove' removes DOM. 
+                # If I remove index 0, index 1 status becomes index 0 in visual list? No.
+                # Let's iterate all form keys to find 'class_name_X'.
+                pass
             
+        # Better approach: Loop through a reasonable range and check if data exists
+        processed_schedules = []
+        for i in range(50):
+            name_key = f'class_name_{i}'
+            if name_key in request.form:
+                c_name = request.form[name_key]
+                program = {}
+                days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+                for day in days:
+                    lessons = request.form.getlist(f'schedule_{i}_{day}[]')
+                    program[day] = lessons
+                processed_schedules.append({
+                    "name": c_name,
+                    "program": program
+                })
+        
+        if processed_schedules:
+            data['class_schedules'] = processed_schedules
+
         save_data(data)
         message = "Ayarlar başarıyla kaydedildi!"
 
@@ -129,34 +144,69 @@ def get_status():
         if teacher:
             duty_list.append(f"{item['location']}: {teacher}")
 
-    # Find current lesson/status
+    # Find current lesson/status AND current lesson index for classes
     current_status = "Ders Dışı"
+    current_lesson_index = -1 # -1 means no lesson (break or off)
     current_time = datetime.strptime(current_time_str, "%H:%M")
     
     schedule = data.get('schedule', [])
-    
-    # Check if schedule is list, if not compatibility fallback
     if isinstance(schedule, dict):
-         # Fallback for old structure if hot-reloading happens mid-migration
          schedule_list = []
          for k, v in schedule.items():
             schedule_list.append({'name': k, 'start': v['start'], 'end': v['end']})
          schedule = schedule_list
 
-    for item in schedule:
+    for index, item in enumerate(schedule):
         try:
             start_time = datetime.strptime(item['start'], "%H:%M")
             end_time = datetime.strptime(item['end'], "%H:%M")
             
             if start_time <= current_time <= end_time:
                 current_status = item['name']
+                # Check if this item name represents a lesson (contains "Ders") or logic mapping
+                # Assuming "1. Ders" -> index 0, "2. Ders" -> index 1.
+                # However, breaks are also in schedule. We only want to count "Lessons".
+                # A heuristic: if it's "Öğle Arası", index is -1.
+                if "Ders" in item['name']:
+                    # We need to find which "Ders" it is.
+                    # Or simpler: count how many items BEFORE this one had "Ders" in name.
+                    pass
                 break
         except (ValueError, KeyError):
             continue
+            
+    # Calculate lesson index properly
+    # We iterate again to find the index of the CURRENT lesson among all lessons.
+    lesson_count = 0
+    calculated_index = -1
+    for item in schedule:
+        try:
+            s = datetime.strptime(item['start'], "%H:%M")
+            e = datetime.strptime(item['end'], "%H:%M")
+            # If it's a lesson (heuristic: not "Arası")
+            if "Ders" in item.get('name', '') or "Etüt" in item.get('name', ''):
+                if s <= current_time <= e:
+                    calculated_index = lesson_count
+                lesson_count += 1
+        except: pass
+    
+    current_lesson_index = calculated_index
+
+    # Get Class Status
+    class_status_list = []
+    if current_lesson_index != -1 and current_day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']:
+        classes = data.get('class_schedules', [])
+        for cls in classes:
+            prog = cls.get('program', {}).get(current_day, [])
+            if current_lesson_index < len(prog):
+                lesson_name = prog[current_lesson_index]
+                if lesson_name:
+                    class_status_list.append(f"{cls['name']}: {lesson_name}")
 
     return jsonify({
         "status": current_status,
         "duty_teachers": duty_list,
+        "class_statuses": class_status_list, 
         "date": now.strftime("%d.%m.%Y"),
         "time": current_time_str,
         "day": current_day_tr,

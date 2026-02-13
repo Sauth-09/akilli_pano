@@ -1,27 +1,149 @@
+```json
 {
-    "schedule": {
-        "1": {
-            "start": "08:30",
-            "end": "09:10"
+    "duty_roster": [
+        {
+            "location": "Bahçe",
+            "schedule": {
+                "Monday": "Ahmet Yılmaz",
+                "Tuesday": "Mehmet Kaya",
+                "Wednesday": "Ali Vural",
+                "Thursday": "Mustafa Yıldız",
+                "Friday": "Hasan Aydın"
+            }
         },
-        "2": {
-            "start": "09:25",
-            "end": "16:00"
+        {
+            "location": "Zemin Kat",
+            "schedule": {
+                "Monday": "Ayşe Demir",
+                "Tuesday": "Fatma Çelik",
+                "Wednesday": "Zeynep Şahin",
+                "Thursday": "Elif Öztürk",
+                "Friday": "Selin Koç"
+            }
         }
-    },
-    "Hasan Aydın",
-    "Selin Koç"
-]
-},
-"messages": [
-"Başarılar dileriz!",
-"Kitap okumayı unutmayın.",
-"Temizlik imandan gelir."
-],
-"school_name": "ATATÜRK ANADOLU LİSESİ",
-"logo_url": "https://img.icons8.com/color/96/school.png",
-"countdown": {
-"target_date": "2026-06-15T10:00:00",
-"label": "YKS'ye Kalan"
+    ],
+    "class_schedules": [
+        {
+            "name": "9-A",
+            "program": {
+                "Monday": [
+                    "MAT",
+                    "MAT",
+                    "FZK",
+                    "FZK",
+                    "TRH",
+                    "TRH",
+                    "BED",
+                    "BED"
+                ],
+                "Tuesday": [
+                    "KMY",
+                    "KMY",
+                    "BYL",
+                    "BYL",
+                    "COG",
+                    "COG",
+                    "REH",
+                    "S.ETK"
+                ],
+                "Wednesday": [
+                    "EDB",
+                    "EDB",
+                    "MAT",
+                    "MAT",
+                    "ING",
+                    "ING",
+                    "DIN",
+                    "DIN"
+                ],
+                "Thursday": [
+                    "FZK",
+                    "FZK",
+                    "KMY",
+                    "KMY",
+                    "TRH",
+                    "TRH",
+                    "BED",
+                    "BED"
+                ],
+                "Friday": [
+                    "MAT",
+                    "MAT",
+                    "EDB",
+                    "EDB",
+                    "ING",
+                    "ING",
+                    "FEL",
+                    "FEL"
+                ]
+            }
+        },
+        {
+            "name": "12-A",
+            "program": {
+                "Monday": [
+                    "MAT",
+                    "MAT",
+                    "KMY",
+                    "KMY",
+                    "FZK",
+                    "FZK",
+                    "BYL",
+                    "BYL"
+                ],
+                "Tuesday": [
+                    "TRH",
+                    "TRH",
+                    "EDB",
+                    "EDB",
+                    "ING",
+                    "ING",
+                    "DIN",
+                    "DIN"
+                ],
+                "Wednesday": [
+                    "MAT",
+                    "MAT",
+                    "GEO",
+                    "GEO",
+                    "FZK",
+                    "FZK",
+                    "REH",
+                    "BED"
+                ],
+                "Thursday": [
+                    "KMY",
+                    "KMY",
+                    "BYL",
+                    "BYL",
+                    "MAT",
+                    "MAT",
+                    "EDB",
+                    "EDB"
+                ],
+                "Friday": [
+                    "DENEME",
+                    "DENEME",
+                    "DENEME",
+                    "DENEME",
+                    "DENEME",
+                    "DENEME",
+                    "DENEME",
+                    "DENEME"
+                ]
+            }
+        }
+    ],
+    "messages": [
+        "Başarılar dileriz!",
+        "Kitap okumayı unutmayın.",
+        "Temizlik imandan gelir."
+    ],
+    "school_name": "ATATÜRK ANADOLU LİSESİ",
+    "logo_url": "https://img.icons8.com/color/96/school.png",
+    "countdown": {
+        "target_date": "2026-06-15T10:00:00",
+        "label": "YKS'ye Kalan"
+    }
 }
-}
+```
