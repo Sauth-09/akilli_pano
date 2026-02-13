@@ -37,37 +37,19 @@
             "end": "16:00"
         }
     },
-    "duty_teachers": {
-        "Monday": [
-            "Ahmet Yılmaz",
-            "Ayşe Demir"
-        ],
-        "Tuesday": [
-            "Mehmet Kaya",
-            "Fatma Çelik"
-        ],
-        "Wednesday": [
-            "Ali Vural",
-            "Zeynep Şahin"
-        ],
-        "Thursday": [
-            "Mustafa Yıldız",
-            "Elif Öztürk"
-        ],
-        "Friday": [
-            "Hasan Aydın",
-            "Selin Koç"
-        ]
-    },
-    "messages": [
-        "Başarılar dileriz!",
-        "Kitap okumayı unutmayın.",
-        "Temizlik imandan gelir."
-    ],
-    "school_name": "ATATÜRK ANADOLU LİSESİ",
-    "logo_url": "https://img.icons8.com/color/96/school.png",
-    "countdown": {
-        "target_date": "2026-06-15T10:00:00",
-        "label": "YKS'ye Kalan"
-    }
+    "Hasan Aydın",
+    "Selin Koç"
+]
+},
+"messages": [
+"Başarılar dileriz!",
+"Kitap okumayı unutmayın.",
+"Temizlik imandan gelir."
+],
+"school_name": "ATATÜRK ANADOLU LİSESİ",
+"logo_url": "https://img.icons8.com/color/96/school.png",
+"countdown": {
+"target_date": "2026-06-15T10:00:00",
+"label": "YKS'ye Kalan"
+}
 }

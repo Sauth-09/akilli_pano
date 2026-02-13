@@ -161,23 +161,65 @@
                 </table>
             </div>
 
-            <!-- Nöbetçi Öğretmenler -->
+            <!-- Nöbetçi Öğretmenler Matrix -->
             <div class="card">
-                <h2>👨‍🏫 Nöbetçi Öğretmenler</h2>
-                {% for day, teachers in data.duty_teachers.items() %}
-                <div style="margin-bottom: 15px;">
-                    <label>
-                        {% if day == 'Monday' %}Pazartesi
-                        {% elif day == 'Tuesday' %}Salı
-                        {% elif day == 'Wednesday' %}Çarşamba
-                        {% elif day == 'Thursday' %}Perşembe
-                        {% elif day == 'Friday' %}Cuma
-                        {% else %}{{ day }}{% endif %}
-                    </label>
-                    <input type="text" name="duty_{{ day }}" value="{{ teachers | join(', ') }}" placeholder="Öğretmen isimlerini virgülle ayırın">
+                <h2>👨‍🏫 Nöbet Programı</h2>
+                <div style="overflow-x: auto;">
+                    <table id="roster-table">
+                        <thead>
+                            <tr>
+                                <th>Nöbet Yeri</th>
+                                <th>Pazartesi</th>
+                                <th>Salı</th>
+                                <th>Çarşamba</th>
+                                <th>Perşembe</th>
+                                <th>Cuma</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in data.duty_roster %}
+                            <tr>
+                                <td><input type="text" name="location[]" value="{{ item.location }}" placeholder="Yer Adı" required></td>
+                                <td><input type="text" name="Monday[]" value="{{ item.schedule.Monday }}"></td>
+                                <td><input type="text" name="Tuesday[]" value="{{ item.schedule.Tuesday }}"></td>
+                                <td><input type="text" name="Wednesday[]" value="{{ item.schedule.Wednesday }}"></td>
+                                <td><input type="text" name="Thursday[]" value="{{ item.schedule.Thursday }}"></td>
+                                <td><input type="text" name="Friday[]" value="{{ item.schedule.Friday }}"></td>
+                                <td><button type="button" onclick="removeRow(this)" style="background: #e74c3c; padding: 5px 10px;">Sil</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                {% endfor %}
+                <button type="button" onclick="addLocation()" style="background: #27ae60; margin-top: 10px;">+ Yeni Nöbet Yeri Ekle</button>
             </div>
+
+            <script>
+                function addLocation() {
+                    const tbody = document.querySelector('#roster-table tbody');
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><input type="text" name="location[]" placeholder="Yer Adı" required></td>
+                        <td><input type="text" name="Monday[]"></td>
+                        <td><input type="text" name="Tuesday[]"></td>
+                        <td><input type="text" name="Wednesday[]"></td>
+                        <td><input type="text" name="Thursday[]"></td>
+                        <td><input type="text" name="Friday[]"></td>
+                        <td><button type="button" onclick="removeRow(this)" style="background: #e74c3c; padding: 5px 10px;">Sil</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+
+                function removeRow(btn) {
+                    const row = btn.closest('tr');
+                    if (document.querySelectorAll('#roster-table tbody tr').length > 1) {
+                        row.remove();
+                    } else {
+                        alert('En az bir nöbet yeri kalmalıdır.');
+                    }
+                }
+            </script>
 
             <button type="submit">💾 Kaydet ve Yayınla</button>
             <a href="/" style="margin-left: 20px; text-decoration: none; color: #555;">← Panoya Dön</a>

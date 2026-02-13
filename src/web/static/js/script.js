@@ -39,9 +39,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update duty teachers
             dutyList.innerHTML = '';
             if (data.duty_teachers && data.duty_teachers.length > 0) {
-                data.duty_teachers.forEach(teacher => {
+                data.duty_teachers.forEach(item => {
                     const li = document.createElement('li');
-                    li.textContent = teacher;
+                    // Item format is "Location: Teacher" or just "Teacher" if fallback
+                    if (item.includes(':')) {
+                        const parts = item.split(':');
+                        li.innerHTML = `<strong>${parts[0]}:</strong> ${parts[1]}`;
+                    } else {
+                        li.textContent = item;
+                    }
                     dutyList.appendChild(li);
                 });
             } else {

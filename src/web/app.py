@@ -73,27 +73,34 @@ def admin():
                 new_schedule[key] = {'start': starts[i], 'end': ends[i]}
         data['schedule'] = new_schedule
         
-        # Duty Teachers
-        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-        for day in days:
-            raw_teachers = request.form.get(f'duty_{day}', '')
-            # Split by comma
-            teachers_list = [t.strip() for t in raw_teachers.split(',') if t.strip()]
-            data['duty_teachers'][day] = teachers_list
+        # Duty Roster (Matrix)
+        locations = request.form.getlist('location[]')
+        mondays = request.form.getlist('Monday[]')
+        tuesdays = request.form.getlist('Tuesday[]')
+        wednesdays = request.form.getlist('Wednesday[]')
+        thursdays = request.form.getlist('Thursday[]')
+        fridays = request.form.getlist('Friday[]')
+        
+        new_roster = []
+        for i, loc_name in enumerate(locations):
+            # Safe access to index
+            if i < len(mondays):
+                new_roster.append({
+                    "location": loc_name,
+                    "schedule": {
+                        "Monday": mondays[i],
+                        "Tuesday": tuesdays[i],
+                        "Wednesday": wednesdays[i],
+                        "Thursday": thursdays[i],
+                        "Friday": fridays[i]
+                    }
+                })
+        data['duty_roster'] = new_roster
             
         save_data(data)
         message = "Ayarlar başarıyla kaydedildi!"
 
     return render_template('admin.html', data=data, message=message)
-
-@app.route('/api/get_slides')
-def get_slides():
-    files = []
-    if os.path.exists(config.SLIDESHOW_DIR):
-        for f in os.listdir(config.SLIDESHOW_DIR):
-            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.mp4', '.webm')):
-                files.append(f)
-    return jsonify(files)
 
 @app.route('/api/get_status')
 def get_status():
@@ -102,20 +109,22 @@ def get_status():
     current_time_str = now.strftime("%H:%M")
     current_day = now.strftime("%A")
     
-    # Translate day name if locale didn't work or returned English
+    # Translate day name
     days_map = {
         "Monday": "Pazartesi", "Tuesday": "Salı", "Wednesday": "Çarşamba",
         "Thursday": "Perşembe", "Friday": "Cuma", "Saturday": "Cumartesi", "Sunday": "Pazar"
     }
-    if current_day in days_map:
-        current_day_tr = days_map[current_day]
-    else:
-        current_day_tr = current_day # Fallback
+    current_day_tr = days_map.get(current_day, current_day)
         
-    # Find duty teachers
-    # We need the English day name for JSON lookup
+    # Find duty teachers for today from Roster
     english_day = now.strftime("%A")
-    duty_teachers = data.get('duty_teachers', {}).get(english_day, [])
+    duty_list = []
+    
+    roster = data.get('duty_roster', [])
+    for item in roster:
+        teacher = item.get('schedule', {}).get(english_day, '')
+        if teacher:
+            duty_list.append(f"{item['location']}: {teacher}")
 
     # Find current lesson/status
     current_status = "Ders Dışı"
@@ -128,9 +137,6 @@ def get_status():
             start_time = datetime.strptime(times['start'], "%H:%M")
             end_time = datetime.strptime(times['end'], "%H:%M")
             
-            # Make sure we compare time objects correctly (ignoring date part issues if any)
-            # The parsed time has 1900-01-01 date, which is fine as we compare against same
-            
             if start_time <= current_time <= end_time:
                 if key == "oglen_arasi":
                     current_status = "Öğle Arası"
@@ -139,17 +145,13 @@ def get_status():
                 break
         except ValueError:
             continue
-            
-    # Simple check for breaks: if not in lesson, check if between lessons
-    if current_status == "Ders Dışı":
-        pass
 
     return jsonify({
         "status": current_status,
-        "duty_teachers": duty_teachers,
+        "duty_teachers": duty_list,
         "date": now.strftime("%d.%m.%Y"),
         "time": current_time_str,
-        "day": current_day_tr, # Send Turkish day name for display
+        "day": current_day_tr,
         "messages": data.get('messages', []),
         "countdown": data.get('countdown', {})
     })
