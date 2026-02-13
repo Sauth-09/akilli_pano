@@ -3,6 +3,12 @@ import os
 import json
 from datetime import datetime
 import locale
+import sys
+
+# Ensure parent directory is in path to import config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+import config
 
 # Set locale for Turkish day names
 try:
@@ -13,13 +19,14 @@ except locale.Error:
     except locale.Error:
         pass # Fallback to default if Turkish locale is not available
 
-app = Flask(__name__)
-PORT = 5000
-DATA_FILE = 'data.json'
-SLIDESHOW_DIR = os.path.join('static', 'slideshow')
+app = Flask(__name__, 
+            static_folder=config.WEB_STATIC_DIR, 
+            template_folder=config.WEB_TEMPLATE_DIR)
 
 def load_data():
-    with open(DATA_FILE, 'r', encoding='utf-8') as f:
+    if not os.path.exists(config.DATA_FILE):
+        return {}
+    with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 @app.route('/')
@@ -29,8 +36,8 @@ def index():
 @app.route('/api/get_slides')
 def get_slides():
     files = []
-    if os.path.exists(SLIDESHOW_DIR):
-        for f in os.listdir(SLIDESHOW_DIR):
+    if os.path.exists(config.SLIDESHOW_DIR):
+        for f in os.listdir(config.SLIDESHOW_DIR):
             if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.mp4', '.webm')):
                 files.append(f)
     return jsonify(files)
@@ -50,17 +57,12 @@ def get_status():
     if current_day in days_map:
         current_day_tr = days_map[current_day]
     else:
-        # If it's already Turkish or another language, keep it, or try to map reverse if needed. 
-        # For simplicity, let's assume standard English names from datetime if locale fails, 
-        # but the JSON keys are in English (Monday, etc.) so we need to map TO English for lookup 
-        # and TO Turkish for display.
-        # Actually data.json keys are English.
         current_day_tr = current_day # Fallback
         
     # Find duty teachers
     # We need the English day name for JSON lookup
     english_day = now.strftime("%A")
-    duty_teachers = data['duty_teachers'].get(english_day, [])
+    duty_teachers = data.get('duty_teachers', {}).get(english_day, [])
 
     # Find current lesson/status
     current_status = "Ders Dışı"
@@ -68,36 +70,25 @@ def get_status():
     
     schedule = data.get('schedule', {})
     
-    # Sort schedule by start time to be sure
-    # This part assumes keys are somewhat sortable or we iterate carefully
-    # But keys are "1", "2", "oglen_arasi".
-    
     for key, times in schedule.items():
-        start_time = datetime.strptime(times['start'], "%H:%M")
-        end_time = datetime.strptime(times['end'], "%H:%M")
-        
-        if start_time <= current_time <= end_time:
-            if key == "oglen_arasi":
-                current_status = "Öğle Arası"
-            else:
-                current_status = f"{key}. Ders"
-            break
-        
-        # Check for break (tenefüs)
-        # If we are between this lesson's end and next lesson's start
-        # This is strictly fetching status. Logic can be improved if needed.
-        
+        try:
+            start_time = datetime.strptime(times['start'], "%H:%M")
+            end_time = datetime.strptime(times['end'], "%H:%M")
+            
+            # Make sure we compare time objects correctly (ignoring date part issues if any)
+            # The parsed time has 1900-01-01 date, which is fine as we compare against same
+            
+            if start_time <= current_time <= end_time:
+                if key == "oglen_arasi":
+                    current_status = "Öğle Arası"
+                else:
+                    current_status = f"{key}. Ders"
+                break
+        except ValueError:
+            continue
+            
     # Simple check for breaks: if not in lesson, check if between lessons
     if current_status == "Ders Dışı":
-        # Check if it's a break
-        sorted_lessons = []
-        for k, v in schedule.items():
-            if k == 'oglen_arasi': continue
-            sorted_lessons.append((k, v['start'], v['end']))
-        
-        # We need a proper way to check breaks. 
-        # For now, let's just send what we found. 
-        # Front-end might handle "Ders Dışı" better or we refine here.
         pass
 
     return jsonify({
@@ -110,4 +101,4 @@ def get_status():
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
