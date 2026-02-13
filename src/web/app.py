@@ -60,17 +60,20 @@ def admin():
         raw_msgs = request.form.get('messages', '')
         data['messages'] = [m.strip() for m in raw_msgs.split('\n') if m.strip()]
         
-        # Schedule
-        keys = request.form.getlist('schedule_keys[]')
+        
+        # Schedule (List-based)
+        names = request.form.getlist('schedule_name[]')
         starts = request.form.getlist('schedule_start[]')
         ends = request.form.getlist('schedule_end[]')
         
-        # Reconstruct schedule dict
-        # We need to maintain order if possible, but python 3.7+ dicts describe order
-        new_schedule = {}
-        for i, key in enumerate(keys):
+        new_schedule = []
+        for i, name in enumerate(names):
             if i < len(starts) and i < len(ends):
-                new_schedule[key] = {'start': starts[i], 'end': ends[i]}
+                new_schedule.append({
+                    'name': name,
+                    'start': starts[i],
+                    'end': ends[i]
+                })
         data['schedule'] = new_schedule
         
         # Duty Roster (Matrix)
@@ -130,20 +133,25 @@ def get_status():
     current_status = "Ders Dışı"
     current_time = datetime.strptime(current_time_str, "%H:%M")
     
-    schedule = data.get('schedule', {})
+    schedule = data.get('schedule', [])
     
-    for key, times in schedule.items():
+    # Check if schedule is list, if not compatibility fallback
+    if isinstance(schedule, dict):
+         # Fallback for old structure if hot-reloading happens mid-migration
+         schedule_list = []
+         for k, v in schedule.items():
+            schedule_list.append({'name': k, 'start': v['start'], 'end': v['end']})
+         schedule = schedule_list
+
+    for item in schedule:
         try:
-            start_time = datetime.strptime(times['start'], "%H:%M")
-            end_time = datetime.strptime(times['end'], "%H:%M")
+            start_time = datetime.strptime(item['start'], "%H:%M")
+            end_time = datetime.strptime(item['end'], "%H:%M")
             
             if start_time <= current_time <= end_time:
-                if key == "oglen_arasi":
-                    current_status = "Öğle Arası"
-                else:
-                    current_status = f"{key}. Ders"
+                current_status = item['name']
                 break
-        except ValueError:
+        except (ValueError, KeyError):
             continue
 
     return jsonify({

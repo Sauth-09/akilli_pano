@@ -135,31 +135,43 @@
                 <textarea name="messages" class="messages-area">{{ data.messages | join('\n') }}</textarea>
             </div>
 
-            <!-- Ders Programı -->
+            <!-- Ders Programı (Card UI) -->
             <div class="card">
                 <h2>📅 Ders Saatleri</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Ders / Bölüm</th>
-                            <th>Başlangıç</th>
-                            <th>Bitiş</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for key, times in data.schedule.items() %}
-                        <tr>
-                            <td>
-                                {% if key == 'oglen_arasi' %}Öğle Arası{% else %}{{ key }}. Ders{% endif %}
-                                <input type="hidden" name="schedule_keys[]" value="{{ key }}">
-                            </td>
-                            <td><input type="time" name="schedule_start[]" value="{{ times.start }}"></td>
-                            <td><input type="time" name="schedule_end[]" value="{{ times.end }}"></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div id="schedule-container" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    {% for item in data.schedule %}
+                    <div class="schedule-card" style="background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 200px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <label>Ders/Etkinlik Adı</label>
+                        <input type="text" name="schedule_name[]" value="{{ item.name }}" required>
+                        <label>Başlangıç</label>
+                        <input type="time" name="schedule_start[]" value="{{ item.start }}" required>
+                        <label>Bitiş</label>
+                        <input type="time" name="schedule_end[]" value="{{ item.end }}" required>
+                        <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 10px;">Sil</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" onclick="addScheduleCard()" style="background: #27ae60; margin-top: 15px;">+ Yeni Ders/Etkinlik Ekle</button>
             </div>
+
+            <script>
+                function addScheduleCard() {
+                    const container = document.getElementById('schedule-container');
+                    const div = document.createElement('div');
+                    div.className = 'schedule-card';
+                    div.style = 'background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 200px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05);';
+                    div.innerHTML = `
+                        <label>Ders/Etkinlik Adı</label>
+                        <input type="text" name="schedule_name[]" placeholder="Örn: 9. Ders" required>
+                        <label>Başlangıç</label>
+                        <input type="time" name="schedule_start[]" required>
+                        <label>Bitiş</label>
+                        <input type="time" name="schedule_end[]" required>
+                        <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 10px;">Sil</button>
+                    `;
+                    container.appendChild(div);
+                }
+            </script>
 
             <!-- Nöbetçi Öğretmenler Matrix -->
             <div class="card">
