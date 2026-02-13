@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dijital Okul Panosu</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="school-name">
+                <img src="https://img.icons8.com/color/96/school.png" alt="Okul Logosu" class="logo">
+                <h1>ATATÜRK ANADOLU LİSESİ</h1>
+            </div>
+            <div class="date-time">
+                <div id="date">01.01.2023</div>
+                <div id="clock">00:00</div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div id="slideshow-container">
+                <div id="loading-message">Yükleniyor...</div>
+                <img id="slide-img" src="" style="display: none;">
+                <video id="slide-video" src="" style="display: none;" muted autoplay></video>
+            </div>
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="card status-card">
+                <h2>🔔 Durum</h2>
+                <div id="current-status" class="status-text">Yükleniyor...</div>
+            </div>
+
+            <div class="card duty-card">
+                <h2>👨‍🏫 Nöbetçi Öğretmenler</h2>
+                <ul id="duty-list">
+                    <li>Yükleniyor...</li>
+                </ul>
+            </div>
+
+            <div class="card message-card">
+                <h2>📢 GÜNÜN SÖZÜ</h2>
+                <div id="daily-message" class="message-text">...</div>
+            </div>
+            
+            <div class="card countdown-card">
+                <h2>⏳ YKS'ye Kalan</h2>
+                <div id="countdown" class="countdown-text">...</div>
+            </div>
+        </aside>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
