@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yönetim Paneli - Akıllı Pano</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f5f6fa;
+            --card-bg: #fff;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 10px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input[type="text"], input[type="time"], input[type="date"], input[type="datetime-local"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .row {
+            display: flex;
+            gap: 15px;
+        }
+        .col {
+            flex: 1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .messages-area {
+            height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ Yönetim Paneli</h1>
+        
+        {% if message %}
+        <div style="background: #27ae60; color: white; padding: 10px; border-radius: 4px; margin-bottom: 20px;">
+            {{ message }}
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            <!-- Genel Ayarlar -->
+            <div class="card">
+                <h2>🏫 Okul Bilgileri</h2>
+                <div class="row">
+                    <div class="col">
+                        <label>Okul Adı</label>
+                        <input type="text" name="school_name" value="{{ data.school_name }}">
+                    </div>
+                    <div class="col">
+                        <label>Logo URL</label>
+                        <input type="text" name="logo_url" value="{{ data.logo_url }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Geri Sayım -->
+            <div class="card">
+                <h2>⏳ Geri Sayım</h2>
+                <div class="row">
+                    <div class="col">
+                        <label>Etkinlik Adı (örn: YKS'ye Kalan)</label>
+                        <input type="text" name="countdown_label" value="{{ data.countdown.label }}">
+                    </div>
+                    <div class="col">
+                        <label>Hedef Tarih</label>
+                        <input type="datetime-local" name="countdown_date" value="{{ data.countdown.target_date }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mesajlar -->
+            <div class="card">
+                <h2>📢 Günün Sözleri / Mesajlar</h2>
+                <label>Her satıra bir mesaj yazın:</label>
+                <textarea name="messages" class="messages-area">{{ data.messages | join('\n') }}</textarea>
+            </div>
+
+            <!-- Ders Programı -->
+            <div class="card">
+                <h2>📅 Ders Saatleri</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ders / Bölüm</th>
+                            <th>Başlangıç</th>
+                            <th>Bitiş</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, times in data.schedule.items() %}
+                        <tr>
+                            <td>
+                                {% if key == 'oglen_arasi' %}Öğle Arası{% else %}{{ key }}. Ders{% endif %}
+                                <input type="hidden" name="schedule_keys[]" value="{{ key }}">
+                            </td>
+                            <td><input type="time" name="schedule_start[]" value="{{ times.start }}"></td>
+                            <td><input type="time" name="schedule_end[]" value="{{ times.end }}"></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Nöbetçi Öğretmenler -->
+            <div class="card">
+                <h2>👨‍🏫 Nöbetçi Öğretmenler</h2>
+                {% for day, teachers in data.duty_teachers.items() %}
+                <div style="margin-bottom: 15px;">
+                    <label>
+                        {% if day == 'Monday' %}Pazartesi
+                        {% elif day == 'Tuesday' %}Salı
+                        {% elif day == 'Wednesday' %}Çarşamba
+                        {% elif day == 'Thursday' %}Perşembe
+                        {% elif day == 'Friday' %}Cuma
+                        {% else %}{{ day }}{% endif %}
+                    </label>
+                    <input type="text" name="duty_{{ day }}" value="{{ teachers | join(', ') }}" placeholder="Öğretmen isimlerini virgülle ayırın">
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit">💾 Kaydet ve Yayınla</button>
+            <a href="/" style="margin-left: 20px; text-decoration: none; color: #555;">← Panoya Dön</a>
+        </form>
+    </div>
+</body>
+</html>

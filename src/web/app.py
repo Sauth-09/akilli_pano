@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request, redirect, url_for
 import os
 import json
 from datetime import datetime
@@ -17,7 +17,7 @@ except locale.Error:
     try:
         locale.setlocale(locale.LC_TIME, "Turkish_Turkey.1254")
     except locale.Error:
-        pass # Fallback to default if Turkish locale is not available
+        pass 
 
 app = Flask(__name__, 
             static_folder=config.WEB_STATIC_DIR, 
@@ -29,12 +29,62 @@ def load_data():
     with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
         return json.load(f)
 
+def save_data(data):
+    with open(config.DATA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
 @app.route('/')
 def index():
     data = load_data()
     school_name = data.get('school_name', 'OKUL ADI')
     logo_url = data.get('logo_url', '')
     return render_template('index.html', school_name=school_name, logo_url=logo_url)
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    data = load_data()
+    message = None
+
+    if request.method == 'POST':
+        # General Settings
+        data['school_name'] = request.form.get('school_name')
+        data['logo_url'] = request.form.get('logo_url')
+        
+        # Countdown
+        data['countdown'] = {
+            'label': request.form.get('countdown_label'),
+            'target_date': request.form.get('countdown_date')
+        }
+        
+        # Messages (split by newline)
+        raw_msgs = request.form.get('messages', '')
+        data['messages'] = [m.strip() for m in raw_msgs.split('\n') if m.strip()]
+        
+        # Schedule
+        keys = request.form.getlist('schedule_keys[]')
+        starts = request.form.getlist('schedule_start[]')
+        ends = request.form.getlist('schedule_end[]')
+        
+        # Reconstruct schedule dict
+        # We need to maintain order if possible, but python 3.7+ dicts describe order
+        new_schedule = {}
+        for i, key in enumerate(keys):
+            if i < len(starts) and i < len(ends):
+                new_schedule[key] = {'start': starts[i], 'end': ends[i]}
+        data['schedule'] = new_schedule
+        
+        # Duty Teachers
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        for day in days:
+            raw_teachers = request.form.get(f'duty_{day}', '')
+            # Split by comma
+            teachers_list = [t.strip() for t in raw_teachers.split(',') if t.strip()]
+            data['duty_teachers'][day] = teachers_list
+            
+        save_data(data)
+        message = "Ayarlar başarıyla kaydedildi!"
+
+    return render_template('admin.html', data=data, message=message)
 
 @app.route('/api/get_slides')
 def get_slides():
