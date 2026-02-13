@@ -52,7 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.messages && data.messages.length > 0) {
                 // Pick a random one for variety every refresh
                 const randomMsg = data.messages[Math.floor(Math.random() * data.messages.length)];
+                const randomMsg = data.messages[Math.floor(Math.random() * data.messages.length)];
                 dailyMessageEl.textContent = `"${randomMsg}"`;
+            }
+
+            // Update Countdown
+            if (data.countdown) {
+                updateCountdown(data.countdown);
             }
 
         } catch (error) {
@@ -63,10 +69,22 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(fetchStatus, 30000);
     fetchStatus();
 
-    // --- COUNTDOWN (YKS Example) ---
-    function updateCountdown() {
-        // Example: YKS Date (Adjust year as needed)
-        const targetDate = new Date('2026-06-15T10:00:00');
+    // --- COUNTDOWN ---
+    function updateCountdown(countdownData) {
+        if (!countdownData || !countdownData.target_date) {
+            countdownEl.textContent = "...";
+            return;
+        }
+
+        // Update label if exists (we might need to add label element in HTML or just replace text content)
+        // For now let's assume the previous card header is static "YKS'ye Kalan" or we update it.
+        // Let's find the header h2 in the countdown card if we want to change label details.
+        const countdownCard = document.querySelector('.countdown-card h2');
+        if (countdownCard && countdownData.label) {
+            countdownCard.textContent = `⏳ ${countdownData.label}`;
+        }
+
+        const targetDate = new Date(countdownData.target_date);
         const now = new Date();
         const diff = targetDate - now;
 
@@ -74,11 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const days = Math.floor(diff / (1000 * 60 * 60 * 24));
             countdownEl.textContent = `${days} Gün Kaldı`;
         } else {
-            countdownEl.textContent = "Sınav Günü!";
+            countdownEl.textContent = "Süre Doldu!";
         }
     }
-    setInterval(updateCountdown, 60000); // Every minute
-    updateCountdown();
 
     // --- SLIDESHOW LOGIC ---
     async function fetchSlides() {

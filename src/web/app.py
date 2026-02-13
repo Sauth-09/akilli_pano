@@ -31,7 +31,10 @@ def load_data():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    data = load_data()
+    school_name = data.get('school_name', 'OKUL ADI')
+    logo_url = data.get('logo_url', '')
+    return render_template('index.html', school_name=school_name, logo_url=logo_url)
 
 @app.route('/api/get_slides')
 def get_slides():
@@ -97,7 +100,8 @@ def get_status():
         "date": now.strftime("%d.%m.%Y"),
         "time": current_time_str,
         "day": current_day_tr, # Send Turkish day name for display
-        "messages": data.get('messages', [])
+        "messages": data.get('messages', []),
+        "countdown": data.get('countdown', {})
     })
 
 if __name__ == '__main__':
