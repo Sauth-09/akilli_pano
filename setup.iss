@@ -33,7 +33,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 Source: "c:\Users\Sadullah\Desktop\Pano_Proje\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
