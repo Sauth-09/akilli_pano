@@ -133,6 +133,41 @@
             table { font-size: 0.85rem; }
             input, select, textarea { font-size: 0.9rem; }
         }
+        /* Collapsible Sections */
+        .card h2 {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card h2::after {
+            content: '▼';
+            font-size: 0.8rem;
+            color: #999;
+            transition: transform 0.3s ease;
+        }
+        .card.collapsed h2::after {
+            transform: rotate(-90deg);
+        }
+        .card-body {
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.3s ease;
+        }
+        .card.collapsed .card-body {
+            max-height: 0 !important;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        /* Birthday search */
+        .search-input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -150,7 +185,7 @@
         <form method="POST" enctype="multipart/form-data">
             
             <!-- Pano Düzeni (Layout) -->
-            <div class="card">
+            <div class="card" id="section-layout">
                 <h2>🎨 Pano Düzeni</h2>
                 <p>Panonun sağ tarafındaki kutuların sırasını ve görünürlüğünü ayarlayın.</p>
                 <div id="layout-container">
@@ -197,9 +232,10 @@
                     }
                 }
             </script>
+            </div>
 
             <!-- Doğum Günleri -->
-            <div class="card">
+            <div class="card" id="section-birthdays">
                 <h2>🎂 Doğum Günleri</h2>
                 <div class="row">
                     <div class="col">
@@ -227,7 +263,8 @@
                 </div>
                 
                 <h3 style="margin-top: 20px;">Kayıtlı Doğum Günleri ({{ data.birthdays | length }})</h3>
-                <div style="max-height: 200px; overflow-y: auto;">
+                <input type="text" class="search-input" id="birthday-search" placeholder="🔍 İsim ara..." oninput="filterBirthdays(this.value)">
+                <div style="max-height: 300px; overflow-y: auto;" id="birthday-table-container">
                     <table>
                         <thead>
                             <tr>
@@ -783,5 +820,62 @@
             <a href="/" style="margin-left: 20px; text-decoration: none; color: #555;">← Panoya Dön</a>
         </form>
     </div>
+
+    <script>
+        // ===== Collapsible Sections =====
+        function toggleSection(card) {
+            card.classList.toggle('collapsed');
+        }
+
+        // Auto-wrap all card contents into card-body on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('form > .card');
+            cards.forEach((card, index) => {
+                const h2 = card.querySelector('h2');
+                if (!h2) return;
+                
+                // Wrap all content after h2 into a card-body div
+                const body = document.createElement('div');
+                body.className = 'card-body';
+                
+                const children = Array.from(card.childNodes);
+                let afterH2 = false;
+                children.forEach(child => {
+                    if (child === h2) {
+                        afterH2 = true;
+                        return;
+                    }
+                    if (afterH2) {
+                        body.appendChild(child);
+                    }
+                });
+                card.appendChild(body);
+                
+                // Make h2 clickable
+                h2.addEventListener('click', function(e) {
+                    // Don't collapse if clicking a button/input inside h2
+                    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+                    toggleSection(card);
+                });
+                
+                // Start collapsed except first 2 sections
+                if (index >= 2) {
+                    card.classList.add('collapsed');
+                }
+            });
+        });
+
+        // ===== Birthday Search Filter =====
+        function filterBirthdays(query) {
+            const container = document.getElementById('birthday-table-container');
+            if (!container) return;
+            const rows = container.querySelectorAll('tbody tr');
+            const q = query.toLowerCase();
+            rows.forEach(row => {
+                const name = row.cells[0] ? row.cells[0].textContent.toLowerCase() : '';
+                row.style.display = name.includes(q) ? '' : 'none';
+            });
+        }
+    </script>
 </body>
 </html>
