@@ -84,7 +84,14 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check authorization
     # Check authorization
     if not is_authorized(user_id):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Yetkiniz yok.")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="⚠️ **Yetkiniz Yok**\n\n"
+                 "Bu bot üzerinden panoya dosya yüklemek için yetkiye ihtiyacınız var.\n"
+                 "Öğretmenseniz lütfen önce giriş yapınız:\n"
+                 "`/giris <sifre>`",
+            parse_mode='Markdown'
+        )
         return
 
     file = None
@@ -116,6 +123,33 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=f"Dosya başarıyla yüklendi ve panoya eklendi! ({file_name})"
+    )
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    if is_authorized(user_id):
+        first_name = update.effective_user.first_name
+        response_text = (
+            f"Merhaba {first_name}! 👋\n\n"
+            "Ben Okul Panosu Botuyum. Bana fotoğraf veya video gönderirsen, bunları okulun dijital panosunda yayınlarım.\n\n"
+            "Şu anda **yetkili kullanıcı** modundasınız. ✅\n"
+            "Lütfen yayınlamak istediğiniz medyayı gönderin."
+        )
+    else:
+        response_text = (
+            "Merhaba! 👋\n\n"
+            "Bu bot, okulumuzun dijital panosunu yönetmek için kullanılmaktadır.\n"
+            "Şu anda medya gönderme **yetkiniz bulunmamaktadır**. ❌\n\n"
+            "Eğer öğretmenseniz ve şifreyi biliyorsanız, yetki almak için şu komutu kullanın:\n"
+            "`/giris <sifre>`\n\n"
+            "Örnek: `/giris okulpanosu`"
+        )
+    
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=response_text,
+        parse_mode='Markdown'
     )
 
 def main():
@@ -164,6 +198,11 @@ def main():
     application.add_handler(start_handler)
     application.add_handler(login_handler)
     application.add_handler(id_handler)
+    application.add_handler(login_handler)
+    application.add_handler(id_handler)
+    # Handle text messages that are not commands
+    text_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text)
+    application.add_handler(text_handler)
     application.add_handler(media_handler)
     
     print(f"Bot çalışıyor (Admin IDs: {config.ADMIN_IDS})...")
