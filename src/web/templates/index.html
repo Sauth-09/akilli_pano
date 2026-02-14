@@ -45,8 +45,18 @@
 
         <!-- Left Sidebar -->
         <aside class="sidebar-left">
+            {% set ns = namespace(count=0) %}
             {% for item in layout %}
-                {% if item.visible and item.type in ['status', 'duty', 'quote'] %}
+                {% if item.visible %}
+                    {% set ns.count = ns.count + 1 %}
+                {% endif %}
+            {% endfor %}
+            {% set half = (ns.count + 1) // 2 %}
+            {% set ns2 = namespace(idx=0) %}
+            {% for item in layout %}
+                {% if item.visible %}
+                    {% set ns2.idx = ns2.idx + 1 %}
+                    {% if ns2.idx <= half %}
                     
                     {% if item.type == 'status' %}
                     <div class="card status-card" id="{{ item.id }}">
@@ -71,33 +81,75 @@
                         <h2>📢 {{ item.title }}</h2>
                         <div id="daily-message" class="message-text">...</div>
                     </div>
+
+                    {% elif item.type == 'countdown' %}
+                    <div class="card countdown-card" id="{{ item.id }}">
+                        <h2>⏳ {{ item.title }}</h2>
+                        <div id="countdown" class="countdown-text">...</div>
+                    </div>
+
+                    {% elif item.type == 'birthdays' %}
+                    <div id="birthday-container-wrapper" style="margin-bottom: 20px;">
+                         <div id="birthday-container-hook" data-title="{{ item.title }}"></div>
+                    </div>
+
+                    {% elif item.type == 'classes' %}
+                    <!-- Merged into status card -->
                     {% endif %}
 
+                    {% endif %}
                 {% endif %}
             {% endfor %}
         </aside>
 
         <!-- Right Sidebar -->
         <aside class="sidebar-right">
-             {% for item in layout %}
-                {% if item.visible and item.type in ['countdown', 'birthdays', 'classes'] %}
+            {% set ns3 = namespace(idx=0) %}
+            {% for item in layout %}
+                {% if item.visible %}
+                    {% set ns3.idx = ns3.idx + 1 %}
+                    {% if ns3.idx > half %}
+                    
+                    {% if item.type == 'status' %}
+                    <div class="card status-card" id="{{ item.id }}">
+                        <div id="status-header">
+                            <div id="current-status" class="status-text">Yükleniyor...</div>
+                        </div>
+                        <div id="class-list-container">
+                            <ul id="class-list"></ul>
+                        </div>
+                    </div>
 
-                    {% if item.type == 'countdown' %}
+                    {% elif item.type == 'duty' %}
+                    <div class="card duty-card" id="{{ item.id }}">
+                        <h2>👨‍🏫 {{ item.title }}</h2>
+                        <ul id="duty-list">
+                            <li>Yükleniyor...</li>
+                        </ul>
+                    </div>
+
+                    {% elif item.type == 'quote' %}
+                    <div class="card message-card" id="{{ item.id }}">
+                        <h2>📢 {{ item.title }}</h2>
+                        <div id="daily-message" class="message-text">...</div>
+                    </div>
+
+                    {% elif item.type == 'countdown' %}
                     <div class="card countdown-card" id="{{ item.id }}">
                         <h2>⏳ {{ item.title }}</h2>
                         <div id="countdown" class="countdown-text">...</div>
                     </div>
-                    
+
                     {% elif item.type == 'birthdays' %}
-                    <!-- Dynamic Birthday Container -->
                     <div id="birthday-container-wrapper" style="margin-bottom: 20px;">
                          <div id="birthday-container-hook" data-title="{{ item.title }}"></div>
                     </div>
-                    
+
                     {% elif item.type == 'classes' %}
                     <!-- Merged into status card -->
                     {% endif %}
 
+                    {% endif %}
                 {% endif %}
             {% endfor %}
         </aside>
