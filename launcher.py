@@ -56,26 +56,45 @@ def get_chrome_path():
             return expanded
     return None
 
+def wait_for_server(port=5000, timeout=30):
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            import socket
+            with socket.create_connection(("localhost", port), timeout=1):
+                return True
+        except (socket.timeout, ConnectionRefusedError):
+            time.sleep(1)
+    return False
+
 def launch_kiosk():
     url = "http://localhost:5000"
-    logger.info(f"Launching Chrome in Kiosk mode at {url}")
-    chrome_exe = get_chrome_path()
-    if chrome_exe:
-        try:
-            subprocess.Popen([
-                chrome_exe,
-                "--kiosk",
-                "--incognito",
-                "--disable-infobars",
-                "--no-first-run",
-                url
-            ])
-        except Exception as e:
-            logger.error(f"Failed to launch Chrome: {e}")
+    logger.info("Waiting for Web Server to be ready...")
+    
+    if wait_for_server():
+        logger.info(f"Server ready. Launching Chrome in Kiosk mode at {url}")
+        chrome_exe = get_chrome_path()
+        if chrome_exe:
+            try:
+                subprocess.Popen([
+                    chrome_exe,
+                    "--kiosk",
+                    "--incognito",
+                    "--disable-infobars",
+                    "--no-first-run",
+                    url
+                ])
+            except Exception as e:
+                logger.error(f"Failed to launch Chrome: {e}")
+                webbrowser.open(url)
+        else:
+            logger.warning("Chrome not found. Opening default browser.")
             webbrowser.open(url)
     else:
-        logger.warning("Chrome not found. Opening default browser.")
-        webbrowser.open(url)
+        logger.error("Web Server failed to start within timeout.")
+        # Optional: Show a message box if possible, or just log
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, "Sunucu başlatılamadı! Lütfen log dosyasını kontrol edin.", "Hata", 16)
 
 def open_settings():
     webbrowser.open("http://localhost:5000/admin")
