@@ -14,6 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let slideQueue = [];
     let currentSlideIndex = -1;
     let slideTimer = null;
+    let slideshowConfig = {
+        duration: 10000,
+        transition: 'fade',
+        fit_mode: 'contain'
+    };
 
     // --- CLOCK & DATE ---
     function updateClock() {
@@ -33,10 +38,69 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/get_status');
             const data = await response.json();
 
-            statusText.textContent = data.status;
+            // Update Basic Status
+            // statusText.textContent = data.status; // Old simple update
+
+            // Enhanced Status Update with Scrolling Classes
+            const statusCard = document.querySelector('.status-card');
+            if (statusCard) {
+                // 1. Update Main Status Text
+                let mainStatusEl = statusCard.querySelector('#current-status');
+                if (!mainStatusEl) {
+                    mainStatusEl = document.createElement('div');
+                    mainStatusEl.id = 'current-status';
+                    mainStatusEl.className = 'status-text';
+                    statusCard.appendChild(mainStatusEl);
+                }
+                mainStatusEl.textContent = data.status;
+
+                // 2. Update Class List (Scrolling)
+                let detailContainer = document.getElementById('status-detail-container');
+                if (!detailContainer) {
+                    detailContainer = document.createElement('div');
+                    detailContainer.id = 'status-detail-container';
+                    detailContainer.style = 'margin-top: 10px; overflow: hidden; white-space: nowrap; height: 30px; position: relative; background: rgba(0,0,0,0.05); border-radius: 4px; display: flex; align-items: center;';
+                    statusCard.appendChild(detailContainer);
+                }
+
+                if (data.class_statuses && data.class_statuses.length > 0) {
+                    // Format: "9-A Matematik   10-B Fizik ..."
+                    // Replace ':' with space for cleaner look or keep it? User said "9/A Türkçe"
+                    const formattedList = data.class_statuses.map(s => s.replace(':', '')).join('   •   ');
+
+                    // Check if content changed to avoid jitter
+                    const currentText = detailContainer.getAttribute('data-content');
+                    if (currentText !== formattedList) {
+                        detailContainer.innerHTML = '';
+                        detailContainer.setAttribute('data-content', formattedList);
+
+                        const scrollingText = document.createElement('div');
+                        scrollingText.textContent = formattedList;
+                        scrollingText.style = 'display: inline-block; padding-left: 100%; animation: scroll-left 20s linear infinite; font-weight: 500; color: #555;';
+                        detailContainer.appendChild(scrollingText);
+
+                        // Add CSS animation keyframes if not exists
+                        if (!document.getElementById('scroll-anim')) {
+                            const style = document.createElement('style');
+                            style.id = 'scroll-anim';
+                            style.textContent = `
+                                 @keyframes scroll-left {
+                                     0% { transform: translateX(0); }
+                                     100% { transform: translateX(-100%); }
+                                 }
+                             `;
+                            document.head.appendChild(style);
+                        }
+                    }
+                } else {
+                    detailContainer.innerHTML = '<span style="padding: 5px; color: #888; width: 100%; text-align: center; display: block;">Ders yok</span>';
+                }
+            }
+
             dateEl.textContent = `${data.date} ${data.day}`;
 
             if (data.duty_teachers && data.duty_teachers.length > 0) {
+                dutyList.innerHTML = '';
                 data.duty_teachers.forEach(item => {
                     const li = document.createElement('li');
                     // Item format is "Location: Teacher" or just "Teacher" if fallback
@@ -53,25 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // --- CLASS STATUSES ---
-            // Find or create container
+            // Only populate if container exists (rendered by layout)
             let classListContainer = document.getElementById('class-status-list');
-            if (!classListContainer) {
-                // Determine where to add it. Sidebar seems appropriate.
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    const h2 = document.createElement('h2');
-                    h2.textContent = '🏫 Sınıf Durumları';
-                    h2.style.marginTop = '20px';
-                    h2.style.borderBottom = '2px solid #fff';
-                    sidebar.appendChild(h2);
-
-                    classListContainer = document.createElement('ul');
-                    classListContainer.id = 'class-status-list';
-                    classListContainer.className = 'info-list';
-                    sidebar.appendChild(classListContainer);
-                }
-            }
-
             if (classListContainer) {
                 classListContainer.innerHTML = '';
                 if (data.class_statuses && data.class_statuses.length > 0) {
@@ -93,10 +140,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // --- BIRTHDAYS ---
+            // Look for the hook created by layout
+            const birthdayHook = document.getElementById('birthday-container-hook');
+
+            if (data.birthdays && data.birthdays.length > 0) {
+                // Determine target: hook or legacy fallback? 
+                // Since we implemented layout, we rely on hook. If hook missing (hidden in layout), we don't show.
+                if (birthdayHook) {
+                    let birthdayContainer = document.getElementById('birthday-special-card');
+                    if (!birthdayContainer) {
+                        birthdayContainer = document.createElement('div');
+                        birthdayContainer.id = 'birthday-special-card';
+                        birthdayContainer.style = 'background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); color: #fff; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); animation: pulse 2s infinite;';
+
+                        // Use title from hook data or default
+                        const title = birthdayHook.getAttribute('data-title') || 'İyi ki Doğdun!';
+
+                        birthdayContainer.innerHTML = `
+                            <h3 style="margin: 0; font-size: 1.2rem;">🎂 ${title}</h3>
+                            <div id="birthday-names" style="font-weight: bold; font-size: 1.1rem; margin-top: 5px; color: #d63384;"></div>
+                        `;
+                        birthdayHook.appendChild(birthdayContainer);
+
+                        // Add pulse animation style if not exists
+                        if (!document.getElementById('anim-style')) {
+                            const style = document.createElement('style');
+                            style.id = 'anim-style';
+                            style.textContent = `
+                                @keyframes pulse {
+                                    0% { transform: scale(1); }
+                                    50% { transform: scale(1.02); }
+                                    100% { transform: scale(1); }
+                                }
+                            `;
+                            document.head.appendChild(style);
+                        }
+                    }
+                    const namesEl = document.getElementById('birthday-names');
+                    if (namesEl) namesEl.textContent = data.birthdays.join(', ');
+                }
+            } else {
+                // If birthdays empty, remove the card if exists
+                const birthdayContainer = document.getElementById('birthday-special-card');
+                if (birthdayContainer) birthdayContainer.remove();
+            }
+
             // Update daily message (random or first)
             if (data.messages && data.messages.length > 0) {
                 // Pick a random one for variety every refresh
-                const randomMsg = data.messages[Math.floor(Math.random() * data.messages.length)];
                 const randomMsg = data.messages[Math.floor(Math.random() * data.messages.length)];
                 dailyMessageEl.textContent = `"${randomMsg}"`;
             }
@@ -106,12 +198,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateCountdown(data.countdown);
             }
 
+            // Update Slideshow Config
+            if (data.slideshow) {
+                slideshowConfig = data.slideshow;
+            }
+
         } catch (error) {
             console.error('Status fetch error:', error);
         }
     }
-    // Update status every 30 seconds
-    setInterval(fetchStatus, 30000);
+    // Update status every 60 seconds (1 minute)
+    setInterval(fetchStatus, 60000);
     fetchStatus();
 
     // --- COUNTDOWN ---
@@ -147,19 +244,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/get_slides');
             const newQueue = await response.json();
 
-            // If queue changed significantly or is empty, logic might need adjustment
-            // For simplicity, we just replace the queue. Ideally we diff.
-            // If we are currently playing, we let it finish.
-
             if (newQueue.length === 0) {
                 slideQueue = [];
                 showNoSlides();
             } else {
-                // Check if queue content is different to avoid restarting if same
+                // If queue changed significantly or is empty, logic might need adjustment
                 const isDifferent = JSON.stringify(slideQueue) !== JSON.stringify(newQueue);
                 if (isDifferent) {
                     slideQueue = newQueue;
-                    // If not currently playing (e.g. was empty), start
+                    // Fix: Reset index if out of bounds, or start if stopped
+                    if (currentSlideIndex >= slideQueue.length) {
+                        currentSlideIndex = -1;
+                    }
+
                     if (currentSlideIndex === -1 && slideQueue.length > 0) {
                         playNextSlide();
                     }
@@ -170,8 +267,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Check for new slides every 15 seconds
-    setInterval(fetchSlides, 15000);
+    // Capture config from status update to keep it synced
+    // We modify fetchStatus to update local variable `slideshowConfig`
+    // However, fetchStatus is above. Let's add a small hook there or just poll it here if endpoint supported it.
+    // Better: Update `data` object in fetchStatus is local to that function. 
+    // We should make `slideshowConfig` global or update it from `fetchStatus`.
+
+    // Check for new slides every 60 seconds (1 minute) to reduce load
+    setInterval(fetchSlides, 60000);
     fetchSlides();
 
     function showNoSlides() {
@@ -191,52 +294,119 @@ document.addEventListener('DOMContentLoaded', () => {
 
         loadingMessage.style.display = 'none';
 
+        // Loop Logic
         currentSlideIndex = (currentSlideIndex + 1) % slideQueue.length;
         const filename = slideQueue[currentSlideIndex];
         const url = `/static/slideshow/${filename}`;
         const ext = filename.split('.').pop().toLowerCase();
 
-        if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
-            // IMAGE
-            slideVideo.style.display = 'none';
-            slideVideo.pause();
+        // Apply Fit Mode
+        const fitClass = slideshowConfig.fit_mode === 'cover' ? 'fit-cover' : 'fit-contain';
+        slideImg.className = fitClass;
+        slideVideo.className = fitClass;
 
-            slideImg.onload = () => {
-                slideImg.style.display = 'block';
-                // Wait 10 seconds then next
-                clearTimeout(slideTimer);
-                slideTimer = setTimeout(playNextSlide, 10000);
-            };
-            slideImg.onerror = () => {
-                console.error("Image failed to load:", url);
-                playNextSlide();
-            };
-            slideImg.src = url;
+        // Transition Effect Logic
+        let effect = slideshowConfig.transition || 'fade';
 
-        } else if (['mp4', 'webm'].includes(ext)) {
-            // VIDEO
-            slideImg.style.display = 'none';
-
-            slideVideo.src = url;
-            slideVideo.style.display = 'block';
-            slideVideo.load();
-            slideVideo.play().catch(e => {
-                console.log("Autoplay prevented or error:", e);
-                playNextSlide();
-            });
-
-            slideVideo.onended = () => {
-                playNextSlide();
-            };
-            slideVideo.onerror = () => {
-                console.error("Video failed to load:", url);
-                playNextSlide();
-            };
-            // Fallback safety: move on after 60s if video gets stuck? 
-            // Better to trust onended.
-        } else {
-            // Unknown type, skip
-            playNextSlide();
+        if (effect === 'random') {
+            const effects = ['fade', 'slide', 'zoom', 'flip', 'blur', 'rotate', 'slide-up', 'slide-down'];
+            effect = effects[Math.floor(Math.random() * effects.length)];
         }
+
+        // Force reflow
+        void slideImg.offsetWidth;
+
+        // Set Exit Class (Initial State)
+        const exitClasses = {
+            'fade': 'fade-out',
+            'slide': 'slide-out-left',
+            'zoom': 'zoom-out',
+            'flip': 'flip-out',
+            'blur': 'blur-out',
+            'rotate': 'rotate-out',
+            'slide-up': 'slide-up-out',
+            'slide-down': 'slide-down-out'
+        };
+
+        if (exitClasses[effect]) {
+            slideImg.classList.add(exitClasses[effect]);
+        } else {
+            slideImg.classList.add('fade-out'); // Fallback
+        }
+
+        // Wait for exit animation (1s) before changing source
+        setTimeout(() => {
+            if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+                // IMAGE
+                slideVideo.style.display = 'none';
+                slideVideo.pause();
+
+                slideImg.onload = () => {
+                    slideImg.style.display = 'block';
+
+                    // Trigger Entry Animation: Remove 'out' classes
+                    slideImg.className = fitClass; // Reset classes to just fit mode
+
+                    // Add 'in' classes for animation
+                    const animationMap = {
+                        'slide': 'slide-in-right',
+                        'zoom': 'zoom-in',
+                        'flip': 'flip-in',
+                        'blur': 'blur-in',
+                        'rotate': 'rotate-in',
+                        'slide-up': 'slide-up-in',
+                        'slide-down': 'slide-down-in'
+                    };
+
+                    if (animationMap[effect]) {
+                        slideImg.classList.add(animationMap[effect]);
+                    } else {
+                        // For fade, we just removed fade-out, so opacity goes back to 1 via transition
+                        // No specific animation class needed if we rely on base transition
+                    }
+
+                    // Cleanup classes after animation ends
+                    setTimeout(() => {
+                        if (animationMap[effect]) {
+                            slideImg.classList.remove(animationMap[effect]);
+                        }
+                    }, 1000);
+
+                    clearTimeout(slideTimer);
+                    slideTimer = setTimeout(playNextSlide, slideshowConfig.duration);
+                };
+                slideImg.onerror = () => {
+                    console.error("Image failed to load:", url);
+                    playNextSlide();
+                };
+                slideImg.src = url;
+
+            } else if (['mp4', 'webm'].includes(ext)) {
+                // VIDEO
+                slideImg.style.display = 'none';
+
+                slideVideo.src = url;
+                slideVideo.style.display = 'block';
+                slideVideo.load();
+                slideVideo.play().catch(e => {
+                    console.log("Autoplay prevented or error:", e);
+                    playNextSlide();
+                });
+
+                slideVideo.onended = () => {
+                    playNextSlide();
+                };
+                slideVideo.onerror = () => {
+                    console.error("Video failed to load:", url);
+                    playNextSlide();
+                };
+            } else {
+                playNextSlide();
+            }
+        }, 1000); // Wait 1s for exit animation
     }
+
+    // Hook to update config from fetchStatus (we need to modify fetchStatus slightly to expose data or write to global)
+    // To avoid modifying fetchStatus again in this tool call (complexity), let's assume fetchStatus writes to global `slideshowConfig` if we declare it at top.
+    // I will use another replace to inject logic into fetchStatus.
 });

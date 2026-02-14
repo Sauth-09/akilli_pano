@@ -1,24 +1,23 @@
-```json
 {
     "duty_roster": [
         {
-            "location": "Bahçe",
+            "location": "bahçe",
             "schedule": {
-                "Monday": "Ahmet Yılmaz",
-                "Tuesday": "Mehmet Kaya",
-                "Wednesday": "Ali Vural",
-                "Thursday": "Mustafa Yıldız",
-                "Friday": "Hasan Aydın"
+                "Monday": "",
+                "Tuesday": "",
+                "Wednesday": "",
+                "Thursday": "",
+                "Friday": "sadullah"
             }
         },
         {
-            "location": "Zemin Kat",
+            "location": "bina",
             "schedule": {
-                "Monday": "Ayşe Demir",
-                "Tuesday": "Fatma Çelik",
-                "Wednesday": "Zeynep Şahin",
-                "Thursday": "Elif Öztürk",
-                "Friday": "Selin Koç"
+                "Monday": "",
+                "Tuesday": "",
+                "Wednesday": "",
+                "Thursday": "",
+                "Friday": "bina öğretmen"
             }
         }
     ],
@@ -28,53 +27,23 @@
             "program": {
                 "Monday": [
                     "MAT",
-                    "MAT",
-                    "FZK",
-                    "FZK",
-                    "TRH",
-                    "TRH",
-                    "BED",
-                    "BED"
+                    "MAT"
                 ],
                 "Tuesday": [
                     "KMY",
-                    "KMY",
-                    "BYL",
-                    "BYL",
-                    "COG",
-                    "COG",
-                    "REH",
-                    "S.ETK"
+                    "TRH"
                 ],
                 "Wednesday": [
                     "EDB",
-                    "EDB",
-                    "MAT",
-                    "MAT",
-                    "ING",
-                    "ING",
-                    "DIN",
-                    "DIN"
+                    "MAT"
                 ],
                 "Thursday": [
                     "FZK",
-                    "FZK",
-                    "KMY",
-                    "KMY",
-                    "TRH",
-                    "TRH",
-                    "BED",
-                    "BED"
+                    "KMY"
                 ],
                 "Friday": [
                     "MAT",
-                    "MAT",
-                    "EDB",
-                    "EDB",
-                    "ING",
-                    "ING",
-                    "FEL",
-                    "FEL"
+                    "DENEME"
                 ]
             }
         },
@@ -83,55 +52,35 @@
             "program": {
                 "Monday": [
                     "MAT",
-                    "MAT",
-                    "KMY",
-                    "KMY",
-                    "FZK",
-                    "FZK",
-                    "BYL",
-                    "BYL"
+                    "MAT"
                 ],
                 "Tuesday": [
-                    "TRH",
-                    "TRH",
-                    "EDB",
-                    "EDB",
-                    "ING",
-                    "ING",
-                    "DIN",
-                    "DIN"
+                    "KMY",
+                    "TRH"
                 ],
                 "Wednesday": [
-                    "MAT",
-                    "MAT",
-                    "GEO",
-                    "GEO",
-                    "FZK",
-                    "FZK",
-                    "REH",
-                    "BED"
+                    "EDB",
+                    "MAT"
                 ],
                 "Thursday": [
-                    "KMY",
-                    "KMY",
-                    "BYL",
-                    "BYL",
-                    "MAT",
-                    "MAT",
-                    "EDB",
-                    "EDB"
+                    "FZK",
+                    "KMY"
                 ],
                 "Friday": [
-                    "DENEME",
-                    "DENEME",
-                    "DENEME",
-                    "DENEME",
-                    "DENEME",
-                    "DENEME",
-                    "DENEME",
+                    "MAT",
                     "DENEME"
                 ]
             }
+        }
+    ],
+    "birthdays": [
+        {
+            "name": "doğum ahmet ee",
+            "date": "13.02.2000"
+        },
+        {
+            "name": "doğum ahme dd",
+            "date": "14.02.2000"
         }
     ],
     "messages": [
@@ -139,11 +88,103 @@
         "Kitap okumayı unutmayın.",
         "Temizlik imandan gelir."
     ],
-    "school_name": "ATATÜRK ANADOLU LİSESİ",
-    "logo_url": "https://img.icons8.com/color/96/school.png",
+    "school_name": "Akçaköy İlk-Ortaokulu",
+    "logo_url": "/static/img/school_logo.jpeg",
+    "slideshow": {
+        "duration": 3000,
+        "transition": "random",
+        "order": "newest",
+        "fit_mode": "contain"
+    },
+    "performance_mode": "high",
     "countdown": {
-        "target_date": "2026-06-15T10:00:00",
-        "label": "YKS'ye Kalan"
+        "label": "YKS'ye Kalan",
+        "target_date": "2026-06-15T10:00"
+    },
+    "layout": [
+        {
+            "id": "card-status",
+            "title": "Durum",
+            "visible": true,
+            "type": "status"
+        },
+        {
+            "id": "card-duty",
+            "title": "Nöbetçi Öğretmenler",
+            "visible": true,
+            "type": "duty"
+        },
+        {
+            "id": "card-quote",
+            "title": "Günün Sözü",
+            "visible": true,
+            "type": "quote"
+        },
+        {
+            "id": "card-countdown",
+            "title": "Geri Sayım",
+            "visible": true,
+            "type": "countdown"
+        },
+        {
+            "id": "card-birthdays",
+            "title": "Doğum Günleri",
+            "visible": true,
+            "type": "birthdays"
+        },
+        {
+            "id": "card-classes",
+            "title": "Sınıf Durumları",
+            "visible": true,
+            "type": "classes"
+        }
+    ],
+    "schedule": [
+        {
+            "name": "1. Ders",
+            "start": "08:30",
+            "end": "09:10"
+        },
+        {
+            "name": "2. Ders",
+            "start": "09:25",
+            "end": "10:05"
+        },
+        {
+            "name": "3. Ders",
+            "start": "10:20",
+            "end": "11:00"
+        },
+        {
+            "name": "4. Ders",
+            "start": "11:15",
+            "end": "11:55"
+        },
+        {
+            "name": "5. Ders",
+            "start": "12:10",
+            "end": "12:50"
+        },
+        {
+            "name": "Öğle Arası",
+            "start": "12:50",
+            "end": "13:30"
+        },
+        {
+            "name": "6. Ders",
+            "start": "13:30",
+            "end": "14:10"
+        },
+        {
+            "name": "7. Ders",
+            "start": "14:25",
+            "end": "15:05"
+        }
+    ],
+    "marquee": {
+        "font_size": "3.5",
+        "duration": "11",
+        "color": "#2c3e50",
+        "font_family": "'Roboto', sans-serif"
     }
 }
-```

@@ -22,6 +22,15 @@ try:
 except ValueError:
     ADMIN_IDS = []
 
+# Teacher Access Configuration
+BOT_ACCESS_CODE = os.getenv("BOT_ACCESS_CODE", "okulpanosu")
+ALLOWED_USERS_FILE = os.path.join(DATA_DIR, 'allowed_users.json')
+
+# Network Configuration (School Network Support)
+BOT_API_URL = os.getenv("BOT_API_URL", None)
+# Default to True unless explicitly set to False/0
+BOT_SSL_VERIFY = os.getenv("BOT_SSL_VERIFY", "True").lower() in ("true", "1", "yes")
+
 # Ensure directories exist
 os.makedirs(SLIDESHOW_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)

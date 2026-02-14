@@ -96,8 +96,114 @@
             {{ message }}
         </div>
         {% endif %}
+        <form method="POST" enctype="multipart/form-data">
+            
+            <!-- Pano Düzeni (Layout) -->
+            <div class="card">
+                <h2>🎨 Pano Düzeni</h2>
+                <p>Panonun sağ tarafındaki kutuların sırasını ve görünürlüğünü ayarlayın.</p>
+                <div id="layout-container">
+                    {% if data.layout %}
+                        {% for item in data.layout %}
+                        <div class="layout-item" style="display: flex; align-items: center; padding: 10px; background: #fff; border: 1px solid #ddd; margin-bottom: 5px; border-radius: 4px;">
+                            <span style="font-size: 1.2rem; cursor: move; margin-right: 10px;">☰</span>
+                            
+                            <!-- Hidden info -->
+                            <input type="hidden" name="layout_id[]" value="{{ item.id }}">
+                            <input type="hidden" name="layout_title[]" value="{{ item.title }}">
+                            <input type="hidden" name="layout_type[]" value="{{ item.type }}">
+                            
+                            <!-- Visibility -->
+                            <input type="checkbox" name="layout_visible_{{ item.id }}" style="margin: 0 10px 0 0;" {% if item.visible %}checked{% endif %}>
+                            
+                            <!-- Title (Static for now, or editable if we want) -->
+                            <span style="flex: 1; font-weight: bold;">{{ item.title }}</span>
+                            
+                            <!-- Reorder Buttons -->
+                            <button type="button" onclick="moveUp(this)" style="padding: 2px 8px; margin-right: 5px; background: #95a5a6;">▲</button>
+                            <button type="button" onclick="moveDown(this)" style="padding: 2px 8px; background: #95a5a6;">▼</button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>Düzen verisi bulunamadı. Lütfen önce varsayılanları oluşturun.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <script>
+                function moveUp(btn) {
+                    const item = btn.closest('.layout-item');
+                    const prev = item.previousElementSibling;
+                    if (prev) {
+                        item.parentElement.insertBefore(item, prev);
+                    }
+                }
+                function moveDown(btn) {
+                    const item = btn.closest('.layout-item');
+                    const next = item.nextElementSibling;
+                    if (next) {
+                        item.parentElement.insertBefore(next, item);
+                    }
+                }
+            </script>
 
-        <form method="POST">
+            <!-- Doğum Günleri -->
+            <div class="card">
+                <h2>🎂 Doğum Günleri</h2>
+                <div class="row">
+                    <div class="col">
+                        <h3>Yeni Ekle</h3>
+                        <div style="display: flex; gap: 10px; align-items: flex-end;">
+                            <div style="flex: 1;">
+                                <label>Ad Soyad</label>
+                                <input type="text" name="birthday_name" placeholder="Örn: Ali Veli" style="margin-bottom: 0;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label>Doğum Tarihi (G.A)</label>
+                                <input type="text" name="birthday_date" placeholder="Örn: 01.01" style="margin-bottom: 0;">
+                            </div>
+                            <button type="submit" name="action" value="add_birthday" style="background: #3498db;">Ekle</button>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h3>Excel'den İçe Aktar (E-Okul)</h3>
+                        <div style="display: flex; gap: 10px; align-items: flex-end;">
+                            <input type="file" name="birthday_file" accept=".xlsx, .xls" style="margin-bottom: 0;">
+                            <button type="submit" name="action" value="import_birthdays" formenctype="multipart/form-data" style="background: #27ae60;">Yükle</button>
+                        </div>
+                        <small>Not: "Adı Soyadı" ve "Doğum Tarihi" sütunları aranır.</small>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 20px;">Kayıtlı Doğum Günleri ({{ data.birthdays | length }})</h3>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ad Soyad</th>
+                                <th>Tarih</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in data.birthdays %}
+                            <tr>
+                                <td>{{ b.name }}</td>
+                                <td>{{ b.date }}</td>
+                                <td>
+                                    <input type="hidden" name="delete_birthday_name" value="{{ b.name }}" disabled> <!-- JS ile aktif edilecek -->
+                                    <button type="submit" name="action" value="delete_birthday" onclick="this.previousElementSibling.disabled=false; this.parentElement.querySelector('input[name=\'delete_birthday_date\']').disabled=false;" style="background: #e74c3c; padding: 2px 6px;">Sil</button>
+                                    <input type="hidden" name="delete_birthday_date" value="{{ b.date }}" disabled>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3">Kayıt bulunamadı.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Genel Ayarlar -->
             <div class="card">
                 <h2>🏫 Okul Bilgileri</h2>
@@ -107,9 +213,125 @@
                         <input type="text" name="school_name" value="{{ data.school_name }}">
                     </div>
                     <div class="col">
-                        <label>Logo URL</label>
-                        <input type="text" name="logo_url" value="{{ data.logo_url }}">
+                        <label>Logo URL (veya Dosya Yükle)</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" name="logo_url" value="{{ data.logo_url }}" placeholder="https://..." style="flex: 1;">
+                            <input type="file" name="logo_file" accept="image/*" style="width: 200px;">
+                        </div>
                     </div>
+                </div>
+                <div class="row" style="margin-top: 15px;">
+                     <div class="col">
+                        <label>Performans Modu (Eski Bilgisayarlar İçin)</label>
+                        <select name="performance_mode" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="high" {% if data.performance_mode == 'high' %}selected{% endif %}>Yüksek (Animasyonlu & Canlı)</option>
+                            <option value="low" {% if data.performance_mode == 'low' %}selected{% endif %}>Düşük (Statik Arkaplan & Hızlı)</option>
+                        </select>
+                        <small style="color: #666;">Eğer panoda donma olursa "Düşük" seçiniz.</small>
+                     </div>
+                </div>
+            </div>
+
+            <!-- Nöbetçi Öğretmenler -->
+            <div class="card">
+                <h2>👮 Nöbetçi Öğretmenler</h2>
+                <p>Nöbet yerlerini ve günlere göre öğretmenleri giriniz.</p>
+                <div style="overflow-x: auto;">
+                    <table id="roster-table">
+                        <thead>
+                            <tr>
+                                <th>Nöbet Yeri</th>
+                                <th>Pazartesi</th>
+                                <th>Salı</th>
+                                <th>Çarşamba</th>
+                                <th>Perşembe</th>
+                                <th>Cuma</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in data.duty_roster %}
+                            <tr>
+                                <td><input type="text" name="location[]" value="{{ item.location }}" required></td>
+                                <td><input type="text" name="Monday[]" value="{{ item.schedule.Monday }}"></td>
+                                <td><input type="text" name="Tuesday[]" value="{{ item.schedule.Tuesday }}"></td>
+                                <td><input type="text" name="Wednesday[]" value="{{ item.schedule.Wednesday }}"></td>
+                                <td><input type="text" name="Thursday[]" value="{{ item.schedule.Thursday }}"></td>
+                                <td><input type="text" name="Friday[]" value="{{ item.schedule.Friday }}"></td>
+                                <td><button type="button" onclick="removeRow(this)" style="background: #e74c3c; padding: 5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">Sil</button></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td><input type="text" name="location[]" placeholder="Yer Adı" required></td>
+                                <td><input type="text" name="Monday[]"></td>
+                                <td><input type="text" name="Tuesday[]"></td>
+                                <td><input type="text" name="Wednesday[]"></td>
+                                <td><input type="text" name="Thursday[]"></td>
+                                <td><input type="text" name="Friday[]"></td>
+                                <td><button type="button" onclick="removeRow(this)" style="background: #e74c3c; padding: 5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">Sil</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" onclick="addLocation()" style="background: #3498db; margin-top: 10px;">+ Yeni Nöbet Yeri Ekle</button>
+                
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <form method="POST" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="hidden" name="action" value="save_rotation_settings">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" name="auto_rotate" onchange="this.form.submit()" {% if data.duty_rotation and data.duty_rotation.auto_rotate %}checked{% endif %}>
+                            <strong>Otomatik Döndür (Her Hafta)</strong>
+                        </label>
+                    </form>
+                    
+                    <form method="POST">
+                        <input type="hidden" name="action" value="rotate_now">
+                        <button type="submit" style="background: #e67e22; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">
+                            🔄 Nöbetleri Şimdi Döndür (Manuel)
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Slideshow Settings -->
+            <div class="card">
+                <h2>📽️ Slayt Ayarları</h2>
+                <div class="form-group">
+                    <label>Slayt Süresi (Saniye):</label>
+                    <input type="number" name="slideshow_duration" value="{{ (data.slideshow.duration / 1000) | int if data.slideshow else 10 }}" min="3" max="60" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px;">
+                </div>
+                <div class="form-group">
+                    <label>Geçiş Efekti:</label>
+                    <select name="slideshow_transition" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px;">
+                        <option value="fade" {% if data.slideshow.transition == 'fade' %}selected{% endif %}>Soluklaşarak (Fade)</option>
+                        <option value="slide" {% if data.slideshow.transition == 'slide' %}selected{% endif %}>Kayarak (Sola)</option>
+                        <option value="zoom" {% if data.slideshow.transition == 'zoom' %}selected{% endif %}>Büyüyerek (Zoom)</option>
+                        <option value="flip" {% if data.slideshow.transition == 'flip' %}selected{% endif %}>Dönerek (Flip)</option>
+                        <option value="blur" {% if data.slideshow.transition == 'blur' %}selected{% endif %}>Bulanıklaşarak (Blur)</option>
+                        <option value="rotate" {% if data.slideshow.transition == 'rotate' %}selected{% endif %}>Tam Tur (Rotate)</option>
+                        <option value="slide-up" {% if data.slideshow.transition == 'slide-up' %}selected{% endif %}>Yukarı Kayarak</option>
+                        <option value="slide-down" {% if data.slideshow.transition == 'slide-down' %}selected{% endif %}>Aşağı Kayarak</option>
+                        <option value="random" {% if data.slideshow.transition == 'random' %}selected{% endif %}>Rastgele (8 Efekt)</option>
+                        <option value="none" {% if data.slideshow.transition == 'none' %}selected{% endif %}>Yok</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Sıralama:</label>
+                    <select name="slideshow_order" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px;">
+                        <option value="newest" {% if data.slideshow.order == 'newest' %}selected{% endif %}>En Yeni İlk</option>
+                        <option value="oldest" {% if data.slideshow.order == 'oldest' %}selected{% endif %}>En Eski İlk</option>
+                        <option value="random" {% if data.slideshow.order == 'random' %}selected{% endif %}>Karışık</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Görüntü Modu:</label>
+                    <select name="slideshow_fit_mode" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px;">
+                        <option value="contain" {% if data.slideshow.fit_mode == 'contain' %}selected{% endif %}>Sığdır (Tamamı görünsün)</option>
+                        <option value="cover" {% if data.slideshow.fit_mode == 'cover' %}selected{% endif %}>Doldur (Boşluk kalmasın)</option>
+                    </select>
                 </div>
             </div>
 
@@ -124,6 +346,37 @@
                     <div class="col">
                         <label>Hedef Tarih</label>
                         <input type="datetime-local" name="countdown_date" value="{{ data.countdown.target_date }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kayan Yazı Ayarları -->
+            <div class="card">
+                <h2>📜 Kayan Yazı Ayarları</h2>
+                <div class="row">
+                    <div class="col">
+                        <label>Yazı Boyutu (rem)</label>
+                        <input type="number" step="0.1" name="marquee_font_size" value="{{ data.marquee.font_size if data.marquee else '1.2' }}">
+                    </div>
+                    <div class="col">
+                        <label>Hız (Saniye - Düşük değer daha hızlı)</label>
+                        <input type="number" name="marquee_duration" value="{{ data.marquee.duration if data.marquee else '30' }}">
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 10px;">
+                    <div class="col">
+                        <label>Yazı Rengi</label>
+                        <input type="color" name="marquee_color" value="{{ data.marquee.color if data.marquee else '#2c3e50' }}" style="width: 100%; height: 40px;">
+                    </div>
+                    <div class="col">
+                         <label>Yazı Tipi</label>
+                         <select name="marquee_font_family" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                             <option value="'Roboto', sans-serif" {% if data.marquee and data.marquee.font_family == "'Roboto', sans-serif" %}selected{% endif %}>Roboto (Varsayılan)</option>
+                             <option value="'Courier New', monospace" {% if data.marquee and data.marquee.font_family == "'Courier New', monospace" %}selected{% endif %}>Daktilo (Courier)</option>
+                             <option value="'Georgia', serif" {% if data.marquee and data.marquee.font_family == "'Georgia', serif" %}selected{% endif %}>Kitap (Georgia)</option>
+                             <option value="'Arial Black', sans-serif" {% if data.marquee and data.marquee.font_family == "'Arial Black', sans-serif" %}selected{% endif %}>Kalın (Arial Black)</option>
+                             <option value="'Comic Sans MS', cursive" {% if data.marquee and data.marquee.font_family == "'Comic Sans MS', cursive" %}selected{% endif %}>El Yazısı (Comic Sans)</option>
+                         </select>
                     </div>
                 </div>
             </div>
@@ -344,7 +597,7 @@
                 }
             </script>
 
-            <button type="submit">💾 Kaydet ve Yayınla</button>
+            <button type="submit" name="action" value="save_settings">💾 Kaydet ve Yayınla</button>
             <a href="/" style="margin-left: 20px; text-decoration: none; color: #555;">← Panoya Dön</a>
         </form>
     </div>

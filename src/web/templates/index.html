@@ -7,12 +7,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="perf-{{ data.performance_mode if data.performance_mode else 'high' }}">
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <div class="school-name">
+            <div class="logo-container">
                 <img src="{{ logo_url }}" alt="Okul Logosu" class="logo">
+            </div>
+            <div class="school-title-container">
                 <h1>{{ school_name }}</h1>
             </div>
             <div class="date-time">
@@ -30,30 +32,78 @@
             </div>
         </main>
 
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="card status-card">
-                <h2>🔔 Durum</h2>
-                <div id="current-status" class="status-text">Yükleniyor...</div>
-            </div>
+        <!-- Left Sidebar -->
+        <aside class="sidebar-left">
+            {% for item in layout %}
+                {% if item.visible and item.type in ['status', 'duty', 'quote'] %}
+                    
+                    {% if item.type == 'status' %}
+                    <div class="card status-card" id="{{ item.id }}">
+                        <h2>🔔 {{ item.title }}</h2>
+                        <div id="current-status" class="status-text">Yükleniyor...</div>
+                    </div>
 
-            <div class="card duty-card">
-                <h2>👨‍🏫 Nöbetçi Öğretmenler</h2>
-                <ul id="duty-list">
-                    <li>Yükleniyor...</li>
-                </ul>
-            </div>
+                    {% elif item.type == 'duty' %}
+                    <div class="card duty-card" id="{{ item.id }}">
+                        <h2>👨‍🏫 {{ item.title }}</h2>
+                        <ul id="duty-list">
+                            <li>Yükleniyor...</li>
+                        </ul>
+                    </div>
 
-            <div class="card message-card">
-                <h2>📢 GÜNÜN SÖZÜ</h2>
-                <div id="daily-message" class="message-text">...</div>
-            </div>
-            
-            <div class="card countdown-card">
-                <h2>⏳ YKS'ye Kalan</h2>
-                <div id="countdown" class="countdown-text">...</div>
-            </div>
+                    {% elif item.type == 'quote' %}
+                    <div class="card message-card" id="{{ item.id }}">
+                        <h2>📢 {{ item.title }}</h2>
+                        <div id="daily-message" class="message-text">...</div>
+                    </div>
+                    {% endif %}
+
+                {% endif %}
+            {% endfor %}
         </aside>
+
+        <!-- Right Sidebar -->
+        <aside class="sidebar-right">
+             {% for item in layout %}
+                {% if item.visible and item.type in ['countdown', 'birthdays', 'classes'] %}
+
+                    {% if item.type == 'countdown' %}
+                    <div class="card countdown-card" id="{{ item.id }}">
+                        <h2>⏳ {{ item.title }}</h2>
+                        <div id="countdown" class="countdown-text">...</div>
+                    </div>
+                    
+                    {% elif item.type == 'birthdays' %}
+                    <!-- Dynamic Birthday Container -->
+                    <div id="birthday-container-wrapper" style="margin-bottom: 20px;">
+                         <div id="birthday-container-hook" data-title="{{ item.title }}"></div>
+                    </div>
+                    
+                    {% elif item.type == 'classes' %}
+                    <!-- Dynamic Classes Container -->
+                    <div id="class-status-list-wrapper">
+                         <h2 style="margin-top: 20px; border-bottom: 2px solid #fff;">🏫 {{ item.title }}</h2>
+                         <ul id="class-status-list" class="info-list">
+                             <li>Yükleniyor...</li>
+                         </ul>
+                    </div>
+                    {% endif %}
+
+                {% endif %}
+            {% endfor %}
+        </aside>
+
+        <!-- Footer (Scrolling Layout) -->
+        <footer class="footer">
+            <div class="marquee-content" id="footer-marquee" style="
+                animation-duration: {{ data.marquee.duration if data.marquee else '30' }}s;
+                font-size: {{ data.marquee.font_size if data.marquee else '1.2' }}rem;
+                color: {{ data.marquee.color if data.marquee else '#2c3e50' }};
+                font-family: {{ data.marquee.font_family if data.marquee else 'inherit' }};
+            ">
+                {{ data.messages | join('   •   ') if data.messages else 'Akıllı Okul Panosu Sistemine Hoşgeldiniz' }}
+            </div>
+        </footer>
     </div>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
