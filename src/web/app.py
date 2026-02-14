@@ -532,7 +532,11 @@ def get_status():
 
     # Get Class Status
     class_status_list = []
-    if current_lesson_index != -1 and current_day_en in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']:
+    is_lesson = current_lesson_index != -1
+    lesson_number = 0
+    
+    if is_lesson and current_day_en in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']:
+        lesson_number = current_lesson_index + 1  # 1-based
         classes = data.get('class_schedules', [])
         for cls in classes:
             prog = cls.get('program', {}).get(current_day_en, [])
@@ -541,20 +545,49 @@ def get_status():
                 if lesson_name:
                     class_status_list.append(f"{cls['name']}: {lesson_name}")
 
+    # Get NEXT lesson classes (for break time display)
+    next_class_status_list = []
+    next_lesson_index = -1
+    
+    if not is_lesson and current_day_en in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']:
+        # Find the next lesson index
+        next_lesson_count = 0
+        for item in schedule:
+            try:
+                s = datetime.strptime(item['start'], "%H:%M")
+                if "Ders" in item.get('name', '') or "Etüt" in item.get('name', ''):
+                    if s > current_time:
+                        next_lesson_index = next_lesson_count
+                        break
+                    next_lesson_count += 1
+            except (ValueError, KeyError):
+                continue
+        
+        if next_lesson_index != -1:
+            classes = data.get('class_schedules', [])
+            for cls in classes:
+                prog = cls.get('program', {}).get(current_day_en, [])
+                if next_lesson_index < len(prog):
+                    lesson_name = prog[next_lesson_index]
+                    if lesson_name:
+                        next_class_status_list.append(f"{cls['name']}: {lesson_name}")
+
     # Birthdays
     todays_birthdays = []
     today_str = now.strftime("%d.%m")
     if 'birthdays' in data:
         for b in data['birthdays']:
             b_date = b.get('date', '')
-            # Check if date starts with today's DD.MM (handles DD.MM.YYYY)
             if b_date.startswith(today_str):
                 todays_birthdays.append(b['name'])
 
     return jsonify({
         "status": current_status,
+        "is_lesson": is_lesson,
+        "lesson_number": lesson_number,
         "duty_teachers": duty_list,
         "class_statuses": class_status_list,
+        "next_class_statuses": next_class_status_list,
         "birthdays": todays_birthdays,
         "date": now.strftime("%d.%m.%Y"),
         "time": current_time_str,

@@ -488,6 +488,13 @@ body.perf-low * {
 }
 
 /* Specific Card Headers */
+.status-card {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
 .status-card h2 {
     background: linear-gradient(90deg, #3498db, #2980b9);
 }
@@ -506,24 +513,109 @@ body.perf-low * {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-#class-status-list-wrapper h2 {
-    background: linear-gradient(90deg, #2ecc71, #27ae60);
-    margin-top: 0 !important;
-    border-bottom: none !important;
+
+/* Status Header */
+#status-header {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    padding: 12px 15px;
+    border-radius: 8px 8px 0 0;
 }
 
-/* Status Text */
 .status-text {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 800;
-    color: #2c3e50;
+    color: #ffffff;
     text-align: center;
-    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+#status-header:has(.lesson-active) {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+}
+
+#status-header:has(.break-active) {
+    background: linear-gradient(135deg, #e67e22, #f39c12);
+}
+
+.status-icon {
+    font-size: 1.4rem;
+}
+
+/* Class List Container */
+#class-list-container {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
     background: #f8f9fa;
 }
 
-#status-detail-container {
-    padding: 5px 10px;
+#class-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#class-list li {
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    font-size: 0.88rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+#class-list li:last-child {
+    border-bottom: none;
+}
+
+.class-name {
+    font-weight: 700;
+    color: #2c3e50;
+    min-width: 50px;
+}
+
+.class-lesson {
+    color: #27ae60;
+    font-weight: 500;
+    text-align: right;
+}
+
+.next-header {
+    font-weight: 700 !important;
+    color: #e67e22 !important;
+    background: rgba(230, 126, 34, 0.08);
+    font-size: 0.85rem !important;
+    padding: 8px 12px !important;
+}
+
+.no-data {
+    color: #999 !important;
+    font-style: italic;
+    text-align: center !important;
+    justify-content: center !important;
+    padding: 20px 12px !important;
+}
+
+/* Auto-scroll animation for overflowing class list */
+#class-list.auto-scroll {
+    animation: scrollUp linear infinite;
+}
+
+@keyframes scrollUp {
+
+    0%,
+    10% {
+        transform: translateY(0);
+    }
+
+    90%,
+    100% {
+        transform: translateY(calc(-100% + 200px));
+    }
 }
 
 /* Duty List */

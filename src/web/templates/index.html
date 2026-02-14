@@ -50,8 +50,12 @@
                     
                     {% if item.type == 'status' %}
                     <div class="card status-card" id="{{ item.id }}">
-                        <h2>🔔 {{ item.title }}</h2>
-                        <div id="current-status" class="status-text">Yükleniyor...</div>
+                        <div id="status-header">
+                            <div id="current-status" class="status-text">Yükleniyor...</div>
+                        </div>
+                        <div id="class-list-container">
+                            <ul id="class-list"></ul>
+                        </div>
                     </div>
 
                     {% elif item.type == 'duty' %}
@@ -91,13 +95,7 @@
                     </div>
                     
                     {% elif item.type == 'classes' %}
-                    <!-- Dynamic Classes Container -->
-                    <div id="class-status-list-wrapper">
-                         <h2 style="margin-top: 20px; border-bottom: 2px solid #fff;">🏫 {{ item.title }}</h2>
-                         <ul id="class-status-list" class="info-list">
-                             <li>Yükleniyor...</li>
-                         </ul>
-                    </div>
+                    <!-- Merged into status card -->
                     {% endif %}
 
                 {% endif %}

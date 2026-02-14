@@ -41,59 +41,77 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update Basic Status
             // statusText.textContent = data.status; // Old simple update
 
-            // Enhanced Status Update with Scrolling Classes
+            // Enhanced Merged Status + Class Card
             const statusCard = document.querySelector('.status-card');
             if (statusCard) {
-                // 1. Update Main Status Text
-                let mainStatusEl = statusCard.querySelector('#current-status');
-                if (!mainStatusEl) {
-                    mainStatusEl = document.createElement('div');
-                    mainStatusEl.id = 'current-status';
-                    mainStatusEl.className = 'status-text';
-                    statusCard.appendChild(mainStatusEl);
-                }
-                mainStatusEl.textContent = data.status;
+                const statusEl = document.getElementById('current-status');
+                const classList = document.getElementById('class-list');
 
-                // 2. Update Class List (Scrolling)
-                let detailContainer = document.getElementById('status-detail-container');
-                if (!detailContainer) {
-                    detailContainer = document.createElement('div');
-                    detailContainer.id = 'status-detail-container';
-                    detailContainer.style = 'margin-top: 10px; overflow: hidden; white-space: nowrap; height: 30px; position: relative; background: rgba(0,0,0,0.05); border-radius: 4px; display: flex; align-items: center;';
-                    statusCard.appendChild(detailContainer);
-                }
+                if (data.is_lesson) {
+                    // DURING LESSON
+                    statusEl.innerHTML = `<span class="status-icon">📚</span> Şuan: <strong>${data.lesson_number}. Dersteyiz</strong>`;
+                    statusEl.className = 'status-text lesson-active';
 
-                if (data.class_statuses && data.class_statuses.length > 0) {
-                    // Format: "9-A Matematik   10-B Fizik ..."
-                    // Replace ':' with space for cleaner look or keep it? User said "9/A Türkçe"
-                    const formattedList = data.class_statuses.map(s => s.replace(':', '')).join('   •   ');
-
-                    // Check if content changed to avoid jitter
-                    const currentText = detailContainer.getAttribute('data-content');
-                    if (currentText !== formattedList) {
-                        detailContainer.innerHTML = '';
-                        detailContainer.setAttribute('data-content', formattedList);
-
-                        const scrollingText = document.createElement('div');
-                        scrollingText.textContent = formattedList;
-                        scrollingText.style = 'display: inline-block; padding-left: 100%; animation: scroll-left 20s linear infinite; font-weight: 500; color: #555;';
-                        detailContainer.appendChild(scrollingText);
-
-                        // Add CSS animation keyframes if not exists
-                        if (!document.getElementById('scroll-anim')) {
-                            const style = document.createElement('style');
-                            style.id = 'scroll-anim';
-                            style.textContent = `
-                                 @keyframes scroll-left {
-                                     0% { transform: translateX(0); }
-                                     100% { transform: translateX(-100%); }
-                                 }
-                             `;
-                            document.head.appendChild(style);
-                        }
+                    // Show current class lessons
+                    classList.innerHTML = '';
+                    if (data.class_statuses && data.class_statuses.length > 0) {
+                        data.class_statuses.forEach(status => {
+                            const li = document.createElement('li');
+                            const parts = status.split(':');
+                            if (parts.length === 2) {
+                                li.innerHTML = `<span class="class-name">${parts[0]}</span><span class="class-lesson">${parts[1]}</span>`;
+                            } else {
+                                li.textContent = status;
+                            }
+                            classList.appendChild(li);
+                        });
+                    } else {
+                        classList.innerHTML = '<li class="no-data">Sınıf programı yüklenmemiş</li>';
                     }
                 } else {
-                    detailContainer.innerHTML = '<span style="padding: 5px; color: #888; width: 100%; text-align: center; display: block;">Ders yok</span>';
+                    // DURING BREAK / OFF HOURS
+                    let statusLabel = data.status;
+                    if (statusLabel.toLowerCase().includes('teneffüs') || statusLabel.toLowerCase().includes('ara')) {
+                        statusEl.innerHTML = `<span class="status-icon">☕</span> Şuan: <strong>Teneffüsteyiz</strong>`;
+                    } else {
+                        statusEl.innerHTML = `<span class="status-icon">🔔</span> ${statusLabel}`;
+                    }
+                    statusEl.className = 'status-text break-active';
+
+                    // Show next class lessons
+                    classList.innerHTML = '';
+                    if (data.next_class_statuses && data.next_class_statuses.length > 0) {
+                        const headerLi = document.createElement('li');
+                        headerLi.className = 'next-header';
+                        headerLi.textContent = '📋 Sonraki Dersler:';
+                        classList.appendChild(headerLi);
+
+                        data.next_class_statuses.forEach(status => {
+                            const li = document.createElement('li');
+                            const parts = status.split(':');
+                            if (parts.length === 2) {
+                                li.innerHTML = `<span class="class-name">${parts[0]}</span><span class="class-lesson">${parts[1]}</span>`;
+                            } else {
+                                li.textContent = status;
+                            }
+                            classList.appendChild(li);
+                        });
+                    } else {
+                        classList.innerHTML = '<li class="no-data">Sonraki ders yok</li>';
+                    }
+                }
+
+                // Auto-scroll if content overflows
+                const container = document.getElementById('class-list-container');
+                if (container && classList.scrollHeight > container.clientHeight) {
+                    // Start scroll animation
+                    if (!classList.classList.contains('auto-scroll')) {
+                        classList.classList.add('auto-scroll');
+                        const scrollDuration = Math.max(10, classList.children.length * 3);
+                        classList.style.animationDuration = scrollDuration + 's';
+                    }
+                } else if (classList.classList.contains('auto-scroll')) {
+                    classList.classList.remove('auto-scroll');
                 }
             }
 
@@ -103,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 dutyList.innerHTML = '';
                 data.duty_teachers.forEach(item => {
                     const li = document.createElement('li');
-                    // Item format is "Location: Teacher" or just "Teacher" if fallback
                     if (item.includes(':')) {
                         const parts = item.split(':');
                         li.innerHTML = `<strong>${parts[0]}:</strong> ${parts[1]}`;
@@ -114,30 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } else {
                 dutyList.innerHTML = '<li>Nöbetçi bulunamadı.</li>';
-            }
-
-            // --- CLASS STATUSES ---
-            // Only populate if container exists (rendered by layout)
-            let classListContainer = document.getElementById('class-status-list');
-            if (classListContainer) {
-                classListContainer.innerHTML = '';
-                if (data.class_statuses && data.class_statuses.length > 0) {
-                    data.class_statuses.forEach(status => {
-                        const li = document.createElement('li');
-                        // Format: "9-A: MAT"
-                        const parts = status.split(':');
-                        if (parts.length === 2) {
-                            li.innerHTML = `<strong>${parts[0]}:</strong> ${parts[1]}`;
-                        } else {
-                            li.textContent = status;
-                        }
-                        classListContainer.appendChild(li);
-                    });
-                } else {
-                    const li = document.createElement('li');
-                    li.textContent = 'Ders yok.';
-                    classListContainer.appendChild(li);
-                }
             }
 
             // --- BIRTHDAYS ---
