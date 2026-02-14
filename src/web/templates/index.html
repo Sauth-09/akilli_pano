@@ -8,6 +8,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body class="perf-{{ data.performance_mode if data.performance_mode else 'high' }}">
+    <!-- Custom Context Menu -->
+    <div id="custom-context-menu" class="context-menu">
+        <div class="menu-item" id="menu-fullscreen">
+            <i class="fas fa-expand"></i> Tam Ekran
+        </div>
+        <div class="menu-item" id="menu-settings">
+            <i class="fas fa-cog"></i> Ayarlar
+        </div>
+    </div>
     <div class="container">
         <!-- Header -->
         <header class="header">

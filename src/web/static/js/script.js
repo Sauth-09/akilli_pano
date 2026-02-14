@@ -409,4 +409,61 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hook to update config from fetchStatus (we need to modify fetchStatus slightly to expose data or write to global)
     // To avoid modifying fetchStatus again in this tool call (complexity), let's assume fetchStatus writes to global `slideshowConfig` if we declare it at top.
     // I will use another replace to inject logic into fetchStatus.
+    // --- CONTEXT MENU LOGIC ---
+    const contextMenu = document.getElementById('custom-context-menu');
+    const menuFullscreen = document.getElementById('menu-fullscreen');
+    const menuSettings = document.getElementById('menu-settings');
+
+    if (contextMenu) {
+        // Prevent default context menu and show custom one
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+
+            // Calculate Position
+            let x = e.clientX;
+            let y = e.clientY;
+
+            // Boundary checks
+            const winWidth = window.innerWidth;
+            const winHeight = window.innerHeight;
+            const menuWidth = 200; // Approx
+            const menuHeight = 100; // Approx
+
+            if (x + menuWidth > winWidth) x = winWidth - menuWidth;
+            if (y + menuHeight > winHeight) y = winHeight - menuHeight;
+
+            contextMenu.style.left = `${x}px`;
+            contextMenu.style.top = `${y}px`;
+            contextMenu.style.display = 'block';
+        });
+
+        // Close menu on click anywhere
+        document.addEventListener('click', () => {
+            contextMenu.style.display = 'none';
+        });
+
+        // Full Screen Toggle
+        if (menuFullscreen) {
+            menuFullscreen.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                    });
+                    menuFullscreen.innerHTML = '<i class="fas fa-compress"></i> Tam Ekrandan Çık';
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                        menuFullscreen.innerHTML = '<i class="fas fa-expand"></i> Tam Ekran';
+                    }
+                }
+            });
+        }
+
+        // Settings Redirect
+        if (menuSettings) {
+            menuSettings.addEventListener('click', () => {
+                window.location.href = '/admin';
+            });
+        }
+    }
 });
