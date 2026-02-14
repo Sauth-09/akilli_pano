@@ -597,6 +597,67 @@
                 }
             </script>
 
+            <!-- Sistem Özellikleri -->
+            <div class="card" style="border: 2px solid #3498db;">
+                <h2>🖥️ Sistem ve Başlangıç</h2>
+                <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                    
+                    <button type="button" onclick="openSlidesFolder()" style="background: #e67e22; display: flex; align-items: center; gap: 5px;">
+                        📂 Slayt Klasörünü Aç
+                    </button>
+
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <input type="checkbox" id="autostart_checkbox" onchange="toggleAutostart(this)" style="margin: 0;">
+                        <span>Windows Başlangıcında Otomatik Çalıştır</span>
+                    </label>
+
+                    <span id="system-msg" style="color: #27ae60; font-weight: bold;"></span>
+                </div>
+            </div>
+
+            <script>
+                async function openSlidesFolder() {
+                    const btn = event.target;
+                    const originalText = btn.innerText;
+                    btn.innerText = "Açılıyor...";
+                    try {
+                        const res = await fetch('/api/open_slides_folder');
+                        const data = await res.json();
+                        if(data.status !== 'success') alert('Hata: ' + data.message);
+                    } catch(e) {
+                        alert('Bağlantı hatası');
+                    }
+                    setTimeout(() => btn.innerText = originalText, 1000);
+                }
+
+                async function toggleAutostart(cb) {
+                    const statusMsg = document.getElementById('system-msg');
+                    statusMsg.innerText = "Ayarlanıyor...";
+                    try {
+                        const res = await fetch('/api/toggle_autostart', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ enable: cb.checked })
+                        });
+                        const data = await res.json();
+                        statusMsg.innerText = data.message;
+                        setTimeout(() => statusMsg.innerText = "", 3000);
+                    } catch(e) {
+                        statusMsg.innerText = "Hata oluştu!";
+                        cb.checked = !cb.checked; // Revert
+                    }
+                }
+
+                // Check status on load
+                (async () => {
+                    try {
+                        const res = await fetch('/api/get_autostart_status');
+                        const data = await res.json();
+                        document.getElementById('autostart_checkbox').checked = data.enabled;
+                    } catch(e) { console.error(e); }
+                })();
+            </script>
+
             <button type="submit" name="action" value="save_settings">💾 Kaydet ve Yayınla</button>
             <a href="/" style="margin-left: 20px; text-decoration: none; color: #555;">← Panoya Dön</a>
         </form>

@@ -5,6 +5,8 @@ from datetime import datetime
 import locale
 import sys
 import pandas as pd
+import winreg
+import subprocess
 
 # Ensure parent directory is in path to import config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -596,6 +598,72 @@ def get_status():
         "countdown": data.get('countdown', {}),
         "slideshow": data.get('slideshow', {}) 
     })
+
+@app.route('/api/open_slides_folder')
+def open_slides_folder():
+    try:
+        if not os.path.exists(config.SLIDESHOW_DIR):
+            os.makedirs(config.SLIDESHOW_DIR)
+        os.startfile(config.SLIDESHOW_DIR)
+        return jsonify({'status': 'success', 'message': 'Klasör açıldı'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/api/toggle_autostart', methods=['POST'])
+def toggle_autostart():
+    try:
+        enable = request.json.get('enable', False)
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        app_name = "AkilliPano"
+        # We assume the executable is where this script is running from, or a specific launcher path.
+        # When running from source (python), it's python.exe + script. 
+        # When frozen (PyInstaller), it's the executable.
+        if getattr(sys, 'frozen', False):
+            exe_path = sys.executable
+        else:
+            # Development mode: Launch with pythonw (no console) via launcher.py if exists, or just this script?
+            # User wants "launcher.py" to be the main entry. 
+            # Let's point to the current working directory's launcher.py if possible, or run_web.py?
+            # Actually, robust way for dev is full path to pythonw.exe + full path to launcher.py
+            launcher_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'launcher.py')
+            if not os.path.exists(launcher_path):
+                 # Fallback to run_web.py in root
+                 launcher_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'run_web.py')
+            
+            exe_path = f'"{sys.executable.replace("python.exe", "pythonw.exe")}" "{launcher_path}"'
+
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_ALL_ACCESS)
+        
+        if enable:
+            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, exe_path)
+            msg = "Otomatik başlatma açıldı."
+        else:
+            try:
+                winreg.DeleteValue(key, app_name)
+                msg = "Otomatik başlatma kapatıldı."
+            except FileNotFoundError:
+                msg = "Zaten kapalıydı."
+        
+        winreg.CloseKey(key)
+        return jsonify({'status': 'success', 'message': msg, 'enabled': enable})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/api/get_autostart_status')
+def get_autostart_status():
+    try:
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        app_name = "AkilliPano"
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_READ)
+        try:
+            winreg.QueryValueEx(key, app_name)
+            enabled = True
+        except FileNotFoundError:
+            enabled = False
+        winreg.CloseKey(key)
+        return jsonify({'enabled': enabled})
+    except:
+        return jsonify({'enabled': False})
 
 @app.route('/api/get_slides')
 def get_slides():
