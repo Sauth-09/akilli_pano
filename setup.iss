@@ -5,9 +5,7 @@
 #define MyAppVersion "1.0"
 #define MyAppPublisher "Sadullah"
 #define MyAppExeName "AkilliPano.exe"
-#define MyAppAssocName MyAppName + " File"
-#define MyAppAssocExt ".myp"
-#define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
+#define ProjectDir "."
 
 [Setup]
 ; ...
@@ -19,14 +17,13 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-ChangesAssociations=yes
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputBaseFilename=AkilliPano_Kurulum
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-SetupIconFile=c:\Users\Sadullah\Desktop\Pano_Proje\logo.ico
+SetupIconFile={#ProjectDir}\logo.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
@@ -36,18 +33,10 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "c:\Users\Sadullah\Desktop\Pano_Proje\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "c:\Users\Sadullah\Desktop\Pano_Proje\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "c:\Users\Sadullah\Desktop\Pano_Proje\.env"; DestDir: "{app}"; Flags: ignoreversion
-Source: "c:\Users\Sadullah\Desktop\Pano_Proje\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ProjectDir}\dist\AkilliPano\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#ProjectDir}\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
-
-[Registry]
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocExt}\OpenWithProgids"; ValueType: string; ValueName: "{#MyAppAssocKey}"; ValueData: ""; Flags: uninsdeletevalue
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}"; ValueType: string; ValueName: ""; ValueData: "{#MyAppAssocName}"; Flags: uninsdeletekey
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
-Root: HKA; Subkey: "Software\Classes\Applications\{#MyAppExeName}\SupportedTypes"; ValueType: string; ValueName: ".myp"; ValueData: ""
+; NOTE: .env is NOT included - user should configure it after install
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

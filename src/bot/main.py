@@ -92,7 +92,6 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     # Check authorization
-    # Check authorization
     if not is_authorized(user_id):
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -206,8 +205,6 @@ def main():
     id_handler = CommandHandler('id', id_command)
 
     application.add_handler(start_handler)
-    application.add_handler(login_handler)
-    application.add_handler(id_handler)
     application.add_handler(login_handler)
     application.add_handler(id_handler)
     # Handle text messages that are not commands

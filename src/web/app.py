@@ -1,141 +1,25 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 import os
 import json
+import copy
 from datetime import datetime
 import locale
 import sys
 import pandas as pd
-import winreg
 import subprocess
+from logging.handlers import RotatingFileHandler
+
+# Conditional import for Windows-only module
+try:
+    import winreg
+except ImportError:
+    winreg = None
 
 # Ensure parent directory is in path to import config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import config
-
-app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
-
-# Helper function for data
-def load_data():
-    if os.path.exists(config.DATA_FILE):
-        with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
-
-def save_data(data):
-    with open(config.DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    data = load_data()
-    message = None
-
-    if request.method == 'POST':
-        action = request.form.get('action')
-        
-        if action == 'add_birthday':
-            name = request.form.get('birthday_name')
-            date_str = request.form.get('birthday_date') # Expecting DD.MM
-            if name and date_str:
-                if 'birthdays' not in data: data['birthdays'] = []
-                data['birthdays'].append({'name': name, 'date': date_str})
-                save_data(data)
-                message = "Doğum günü eklendi."
-                
-        elif action == 'delete_birthday':
-            name = request.form.get('delete_birthday_name')
-            date_str = request.form.get('delete_birthday_date')
-            if 'birthdays' in data:
-                data['birthdays'] = [b for b in data['birthdays'] if not (b['name'] == name and b['date'] == date_str)]
-                save_data(data)
-                message = "Doğum günü silindi."
-
-        elif action == 'import_birthdays':
-            if 'birthday_file' in request.files:
-                file = request.files['birthday_file']
-                if file.filename != '':
-                    try:
-                        df = pd.read_excel(file)
-                        # Heuristic: Find columns containing "Ad", "Soyad", "Doğum"
-                        name_col = None
-                        surname_col = None
-                        date_col = None
-                        
-                        for col in df.columns:
-                            c_lower = str(col).lower()
-                            if "ad" in c_lower and "soyad" in c_lower:
-                                name_col = col # Adı Soyadı joined
-                            elif "ad" in c_lower and not name_col:
-                                name_col = col
-                            elif "soyad" in c_lower:
-                                surname_col = col
-                            
-                            if "doğum" in c_lower and "tarih" in c_lower:
-                                date_col = col
-                        
-                        added_count = 0
-                        if 'birthdays' not in data: data['birthdays'] = []
-                        
-                        if (name_col or (name_col and surname_col)) and date_col:
-                            for index, row in df.iterrows():
-                                try:
-                                    full_name = ""
-                                    if surname_col:
-                                        full_name = f"{row[name_col]} {row[surname_col]}".strip()
-                                    else:
-                                        full_name = str(row[name_col]).strip()
-                                    
-                                    # Parse Date
-                                    d = row[date_col]
-                                    if isinstance(d, datetime):
-                                        date_formatted = d.strftime("%d.%m")
-                                    else:
-                                        # Should try parsing string "DD.MM.YYYY"
-                                        d_str = str(d).replace('/', '.')
-                                        # Simple extract first two parts
-                                        parts = d_str.split('.')
-                                        if len(parts) >= 2:
-                                            date_formatted = f"{parts[0].zfill(2)}.{parts[1].zfill(2)}"
-                                        else:
-                                            continue
-                                    
-                                    # Check duplicate
-                                    if not any(b['name'] == full_name and b['date'] == date_formatted for b in data['birthdays']):
-                                        data['birthdays'].append({'name': full_name, 'date': date_formatted})
-                                        added_count += 1
-                                except Exception as e:
-                                    print(f"Row error: {e}")
-                                    continue
-                            
-                            save_data(data)
-                            message = f"{added_count} kişi eklendi."
-                        else:
-                            message = "Excel formatı anlaşılamadı. 'Adı Soyadı' ve 'Doğum Tarihi' sütunları gerekli."
-                    except Exception as e:
-                        message = f"Hata: {str(e)}"
-
-        else:
-            # General Settings Save (default fallthrough if no specific action or implicit save)
-            # ... existing save logic ...
-            # Need to encapsulate existing save logic to run only if action is None or 'save_general'
-            # But the existing form submit button has no name='action'. Let's assume it's general save.
-            # Or better, we wrap the existing logic in a block.
-            
-            # General Settings
-            data['school_name'] = request.form.get('school_name')
-            # ... rest of existing save logic ...
-            # To avoid huge replacement, I will assume the previous 'if request.method == POST' block
-            # is what I'm modifying.
-            # I will inject the specific actions check at the start of POST handling.
-            pass
-
-    # ... return logic
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-import config
+import logging
 
 # Set locale for Turkish day names
 try:
@@ -150,11 +34,69 @@ app = Flask(__name__,
             static_folder=config.WEB_STATIC_DIR, 
             template_folder=config.WEB_TEMPLATE_DIR)
 
+# Secret key for session management
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'akilli-pano-secret-key-2026')
+
+# Admin password (from data.json or config)
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin')
+
+# Configure logging with rotation (max 5MB, keep 3 backups)
+handler = RotatingFileHandler("launcher.log", maxBytes=5*1024*1024, backupCount=3)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+app.logger.addHandler(handler)
+app.logger.setLevel(logging.INFO)
+logging.getLogger('werkzeug').addHandler(handler)
+
+DEFAULT_DATA = {
+    "duty_roster": [],
+    "class_schedules": [],
+    "birthdays": [],
+    "messages": ["Akıllı Okul Panosu Sistemine Hoşgeldiniz"],
+    "school_name": "OKUL ADI",
+    "logo_url": "",
+    "slideshow": {
+        "duration": 5000,
+        "transition": "fade",
+        "order": "newest",
+        "fit_mode": "contain"
+    },
+    "performance_mode": "high",
+    "countdown": {
+        "label": "Geri Sayım",
+        "target_date": ""
+    },
+    "layout": [
+        {"id": "card-status", "title": "Durum", "visible": True, "type": "status"},
+        {"id": "card-duty", "title": "Nöbetçi Öğretmenler", "visible": True, "type": "duty"},
+        {"id": "card-quote", "title": "Günün Sözü", "visible": True, "type": "quote"},
+        {"id": "card-countdown", "title": "Geri Sayım", "visible": True, "type": "countdown"},
+        {"id": "card-birthdays", "title": "Doğum Günleri", "visible": True, "type": "birthdays"},
+        {"id": "card-classes", "title": "Sınıf Durumları", "visible": True, "type": "classes"}
+    ],
+    "schedule": [],
+    "marquee": {
+        "font_size": "1.2",
+        "duration": "30",
+        "color": "#2c3e50",
+        "font_family": "inherit"
+    }
+}
+
 def load_data():
-    if not os.path.exists(config.DATA_FILE):
-        return {}
-    with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    data = copy.deepcopy(DEFAULT_DATA)
+    if os.path.exists(config.DATA_FILE):
+        try:
+            with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
+                loaded = json.load(f)
+                # Simple merge for top-level keys
+                for k, v in loaded.items():
+                    if isinstance(v, dict) and k in data and isinstance(data[k], dict):
+                        data[k].update(v)
+                    else:
+                        data[k] = v
+        except Exception as e:
+            app.logger.error(f"Error loading data.json: {e}")
+    return data
 
 def save_data(data):
     with open(config.DATA_FILE, 'w', encoding='utf-8') as f:
@@ -192,8 +134,32 @@ def rotate_roster(data):
                 item['schedule'][day] = rotated_teachers[i]
     return data
 
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if session.get('admin_logged_in'):
+        return redirect(url_for('admin'))
+    error = None
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        # Check password from data.json or env
+        data = load_data()
+        admin_pass = data.get('admin_password', ADMIN_PASSWORD)
+        if password == admin_pass:
+            session['admin_logged_in'] = True
+            return redirect(url_for('admin'))
+        else:
+            error = 'Hatalı şifre!'
+    return render_template('admin_login.html', error=error)
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('admin_login'))
+
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
     data = load_data()
     message = None
 
@@ -205,15 +171,6 @@ def admin():
             save_data(data)
             message = "Nöbetler döndürüldü."
         
-        elif action == 'save_rotation_settings':
-             if 'duty_rotation' not in data: data['duty_rotation'] = {}
-             data['duty_rotation']['auto_rotate'] = request.form.get('auto_rotate') == 'on'
-             # Initialize last week if enabling
-             if data['duty_rotation']['auto_rotate'] and data['duty_rotation'].get('last_week_number', 0) == 0:
-                 data['duty_rotation']['last_week_number'] = datetime.now().isocalendar()[1]
-             
-             save_data(data)
-             message = "Nöbet ayarları kaydedildi."
              
         elif action == 'add_birthday':
             name = request.form.get('birthday_name')
@@ -280,7 +237,8 @@ def admin():
                                     if date_formatted and not any(b['name'] == full_name and b['date'] == date_formatted for b in data['birthdays']):
                                         data['birthdays'].append({'name': full_name, 'date': date_formatted})
                                         added_count += 1
-                                except: continue
+                                except Exception:
+                                    continue
                             
                             save_data(data)
                             message = f"{added_count} kişi eklendi."
@@ -289,9 +247,8 @@ def admin():
                     except Exception as e:
                         message = f"Hata: {str(e)}"
         
-        else:
-            # General Settings Save (Existing logic)
-            # General Settings Save (Existing logic)
+        elif action == 'save_settings' or action is None:
+            # General Settings Save
             data['school_name'] = request.form.get('school_name')
             data['bot_access_code'] = request.form.get('bot_access_code', 'okulpanosu')
             
@@ -307,7 +264,7 @@ def admin():
                     # Save file with a standard name or original name
                     # Let's use 'school_logo' + extension to keep it simple and overwrite easily
                     ext = os.path.splitext(file.filename)[1].lower()
-                    if ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+                    if ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico']:
                         filename = f"school_logo{ext}"
                         full_path = os.path.join(img_dir, filename)
                         file.save(full_path)
@@ -436,7 +393,7 @@ def admin():
             def get_int(key, default):
                 try:
                     return int(request.form.get(key, default))
-                except:
+                except (ValueError, TypeError):
                     return default
 
             # Get existing or default
@@ -459,6 +416,12 @@ def admin():
             
             # Performance Mode
             data['performance_mode'] = request.form.get('performance_mode', 'high')
+
+            # Auto-rotate setting
+            if 'duty_rotation' not in data: data['duty_rotation'] = {}
+            data['duty_rotation']['auto_rotate'] = request.form.get('auto_rotate') == 'on'
+            if data['duty_rotation']['auto_rotate'] and data['duty_rotation'].get('last_week_number', 0) == 0:
+                data['duty_rotation']['last_week_number'] = datetime.now().isocalendar()[1]
 
             save_data(data)
             message = "Ayarlar başarıyla kaydedildi!"
@@ -562,7 +525,8 @@ def get_status():
                 if s <= current_time <= e:
                     calculated_index = lesson_count
                 lesson_count += 1
-        except: pass
+        except (ValueError, KeyError):
+            pass
     
     current_lesson_index = calculated_index
 
@@ -612,6 +576,8 @@ def open_slides_folder():
 
 @app.route('/api/toggle_autostart', methods=['POST'])
 def toggle_autostart():
+    if winreg is None:
+        return jsonify({'status': 'error', 'message': 'Bu özellik sadece Windows\'ta çalışır.'})
     try:
         enable = request.json.get('enable', False)
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
@@ -652,6 +618,8 @@ def toggle_autostart():
 
 @app.route('/api/get_autostart_status')
 def get_autostart_status():
+    if winreg is None:
+        return jsonify({'enabled': False})
     try:
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
         app_name = "AkilliPano"
@@ -663,7 +631,7 @@ def get_autostart_status():
             enabled = False
         winreg.CloseKey(key)
         return jsonify({'enabled': enabled})
-    except:
+    except Exception:
         return jsonify({'enabled': False})
 
 @app.route('/api/get_slides')
@@ -695,5 +663,43 @@ def get_slides():
         
     return jsonify(slides)
 
+@app.route('/api/delete_slide', methods=['POST'])
+def delete_slide():
+    try:
+        filename = request.json.get('filename', '')
+        if not filename:
+            return jsonify({'status': 'error', 'message': 'Dosya adı belirtilmedi.'})
+        
+        # Security: prevent path traversal
+        safe_name = os.path.basename(filename)
+        file_path = os.path.join(config.SLIDESHOW_DIR, safe_name)
+        
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return jsonify({'status': 'success', 'message': f'{safe_name} silindi.'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Dosya bulunamadı.'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/api/get_slides_with_info')
+def get_slides_with_info():
+    """Returns slide list with thumbnail info for admin panel."""
+    slides = []
+    if os.path.exists(config.SLIDESHOW_DIR):
+        valid_exts = ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.webm']
+        for f in sorted(os.listdir(config.SLIDESHOW_DIR), reverse=True):
+            ext = os.path.splitext(f)[1].lower()
+            if ext in valid_exts:
+                full_path = os.path.join(config.SLIDESHOW_DIR, f)
+                size_kb = os.path.getsize(full_path) / 1024
+                slides.append({
+                    'name': f,
+                    'size': f"{size_kb:.0f} KB",
+                    'type': 'image' if ext in ['.jpg', '.jpeg', '.png', '.gif'] else 'video',
+                    'url': url_for('static', filename=f'slideshow/{f}')
+                })
+    return jsonify(slides)
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=config.WEB_PORT, debug=True)

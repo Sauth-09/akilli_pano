@@ -5,3 +5,9 @@ __pycache__/
 venv/
 .idea/
 .vscode/
+dist/
+build/
+Output/
+launcher.log
+*.spec
+data/

@@ -9,6 +9,8 @@ from PIL import Image
 import pystray
 from pystray import MenuItem as item
 
+import config
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -24,11 +26,11 @@ logger = logging.getLogger("Launcher")
 stop_event = threading.Event()
 
 def run_web_server():
-    logger.info("Starting Web Server...")
+    logger.info(f"Starting Web Server on port {config.WEB_PORT}...")
     try:
         from src.web.app import app
         # Disable reloader to avoid main thread issues in frozen app
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+        app.run(host='0.0.0.0', port=config.WEB_PORT, debug=False, use_reloader=False)
     except Exception as e:
         logger.error(f"Web Server Error: {e}")
 
@@ -56,7 +58,7 @@ def get_chrome_path():
             return expanded
     return None
 
-def wait_for_server(port=5000, timeout=30):
+def wait_for_server(port=config.WEB_PORT, timeout=30):
     start_time = time.time()
     while time.time() - start_time < timeout:
         try:
@@ -68,7 +70,7 @@ def wait_for_server(port=5000, timeout=30):
     return False
 
 def launch_kiosk():
-    url = "http://localhost:5000"
+    url = f"http://localhost:{config.WEB_PORT}"
     logger.info("Waiting for Web Server to be ready...")
     
     if wait_for_server():
@@ -78,7 +80,7 @@ def launch_kiosk():
             try:
                 subprocess.Popen([
                     chrome_exe,
-                    "--kiosk",
+                    "--start-fullscreen",
                     "--incognito",
                     "--disable-infobars",
                     "--no-first-run",
@@ -97,7 +99,7 @@ def launch_kiosk():
         ctypes.windll.user32.MessageBoxW(0, "Sunucu başlatılamadı! Lütfen log dosyasını kontrol edin.", "Hata", 16)
 
 def open_settings():
-    webbrowser.open("http://localhost:5000/admin")
+    webbrowser.open(f"http://localhost:{config.WEB_PORT}/admin")
 
 def exit_app(icon, item):
     logger.info("Exiting application...")
