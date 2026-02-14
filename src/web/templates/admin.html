@@ -12,870 +12,742 @@
             --accent: #3498db;
             --bg: #f5f6fa;
             --card-bg: #fff;
+            --sidebar-width: 220px;
         }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Roboto', sans-serif;
             background-color: var(--bg);
             color: #333;
-            margin: 0;
-            padding: 20px;
+            height: 100vh;
+            overflow: hidden;
         }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
+
+        /* ===== Top Bar ===== */
+        .top-bar {
+            background: linear-gradient(135deg, var(--primary), #34495e);
+            color: white;
+            padding: 12px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
         }
-        h1 {
+        .top-bar h1 { font-size: 1.3rem; font-weight: 700; }
+        .top-bar a { color: #e74c3c; text-decoration: none; font-weight: 500; background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 4px; }
+        .top-bar a:hover { background: rgba(255,255,255,0.25); }
+
+        /* ===== Layout: Sidebar + Content ===== */
+        .admin-layout {
+            display: flex;
+            height: calc(100vh - 50px);
+        }
+
+        /* ===== Sidebar Navigation ===== */
+        .sidebar-nav {
+            width: var(--sidebar-width);
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .nav-item {
+            padding: 14px 18px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+            font-size: 0.92rem;
+            font-weight: 500;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-item:hover {
+            background: #f0f4f8;
             color: var(--primary);
-            border-bottom: 2px solid var(--accent);
-            padding-bottom: 10px;
         }
+        .nav-item.active {
+            background: #e8f4fd;
+            border-left-color: var(--accent);
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .nav-icon { font-size: 1.1rem; }
+
+        /* ===== Main Content ===== */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 30px;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ===== Cards inside panels ===== */
         .card {
             background: var(--card-bg);
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
         }
-        h2 {
-            margin-top: 0;
-            color: var(--primary);
-            font-size: 1.2rem;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        input[type="text"], input[type="time"], input[type="date"], input[type="datetime-local"], textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-            margin-bottom: 15px;
-        }
-        button {
-            background-color: var(--accent);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-        .row {
-            display: flex;
-            gap: 15px;
-        }
-        .col {
-            flex: 1;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }
-        th, td {
-            text-align: left;
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-        }
-        .messages-area {
-            height: 100px;
-        }
-        .header-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header-bar a {
-            color: #e74c3c;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .slide-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .slide-item {
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            overflow: hidden;
-            text-align: center;
-            position: relative;
-        }
-        .slide-item img, .slide-item video {
-            width: 100%;
-            height: 100px;
-            object-fit: cover;
-        }
-        .slide-item .info {
-            padding: 5px;
-            font-size: 0.75rem;
-            color: #888;
-        }
-        .slide-item button {
-            width: 100%;
-            background: #e74c3c;
-            border-radius: 0;
-            padding: 5px;
-            font-size: 0.8rem;
-        }
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .row { flex-direction: column; }
-            .col { width: 100%; }
-            table { font-size: 0.85rem; }
-            input, select, textarea { font-size: 0.9rem; }
-        }
-        /* Collapsible Sections */
         .card h2 {
-            cursor: pointer;
-            user-select: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            margin: 0 0 15px 0;
+            color: var(--primary);
+            font-size: 1.15rem;
         }
-        .card h2::after {
-            content: '▼';
-            font-size: 0.8rem;
-            color: #999;
-            transition: transform 0.3s ease;
+
+        /* ===== Form Elements ===== */
+        label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
+        input[type="text"], input[type="time"], input[type="date"], input[type="datetime-local"], input[type="number"], textarea, select {
+            width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px;
+            box-sizing: border-box; margin-bottom: 12px; font-size: 0.9rem;
         }
-        .card.collapsed h2::after {
-            transform: rotate(-90deg);
+        select { background: white; }
+        button {
+            background-color: var(--accent); color: white; border: none;
+            padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9rem;
         }
-        .card-body {
-            overflow: hidden;
-            transition: max-height 0.4s ease, padding 0.3s ease;
+        button:hover { background-color: #2980b9; }
+
+        .row { display: flex; gap: 15px; }
+        .col { flex: 1; }
+
+        /* ===== Tables ===== */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        th { background: #f8f9fa; font-weight: 600; }
+
+        /* ===== Slides Grid ===== */
+        .slide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
+        .slide-item { border: 1px solid #ddd; border-radius: 6px; overflow: hidden; text-align: center; }
+        .slide-item img, .slide-item video { width: 100%; height: 90px; object-fit: cover; }
+        .slide-item .info { padding: 4px; font-size: 0.7rem; color: #888; }
+        .slide-item button { width: 100%; background: #e74c3c; border-radius: 0; padding: 4px; font-size: 0.75rem; }
+
+        /* ===== Layout Items ===== */
+        .layout-item {
+            display: flex; align-items: center; padding: 10px; background: #f8f9fa;
+            border: 1px solid #e0e0e0; margin-bottom: 5px; border-radius: 4px;
         }
-        .card.collapsed .card-body {
-            max-height: 0 !important;
-            padding-top: 0;
-            padding-bottom: 0;
+
+        /* ===== Save Bar ===== */
+        .save-bar {
+            position: sticky; bottom: 0; background: white; padding: 15px 30px;
+            border-top: 1px solid #e0e0e0; display: flex; align-items: center; gap: 15px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
         }
-        /* Birthday search */
+        .save-bar button[type="submit"] {
+            background: #27ae60; padding: 10px 25px; font-size: 1rem; font-weight: 600;
+        }
+        .save-bar button[type="submit"]:hover { background: #219a52; }
+
+        /* ===== Message ===== */
+        .alert-success {
+            background: #d4edda; color: #155724; padding: 10px 15px; border-radius: 4px;
+            margin-bottom: 15px; border: 1px solid #c3e6cb;
+        }
+
+        /* ===== Birthday search ===== */
         .search-input {
-            width: 100%;
-            padding: 6px 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
+            width: 100%; padding: 6px 10px; border: 1px solid #ddd;
+            border-radius: 4px; margin-bottom: 8px; font-size: 0.9rem;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 768px) {
+            .admin-layout { flex-direction: column; }
+            .sidebar-nav { width: 100%; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid #e0e0e0; }
+            .nav-item { padding: 10px 12px; white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; font-size: 0.8rem; }
+            .nav-item.active { border-left-color: transparent; border-bottom-color: var(--accent); }
+            .main-content { padding: 15px; }
+            .row { flex-direction: column; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header-bar">
-            <h1>⚙️ Yönetim Paneli</h1>
-            <a href="/admin/logout">🚪 Çıkış Yap</a>
-        </div>
-        
-        {% if message %}
-        <div style="background: #27ae60; color: white; padding: 10px; border-radius: 4px; margin-bottom: 20px;">
-            {{ message }}
-        </div>
-        {% endif %}
-        <form method="POST" enctype="multipart/form-data">
-            
-            <!-- Pano Düzeni (Layout) -->
-            <div class="card" id="section-layout">
-                <h2>🎨 Pano Düzeni</h2>
-                <p>Panonun sağ tarafındaki kutuların sırasını ve görünürlüğünü ayarlayın.</p>
-                <div id="layout-container">
-                    {% if data.layout %}
-                        {% for item in data.layout %}
-                        <div class="layout-item" style="display: flex; align-items: center; padding: 10px; background: #fff; border: 1px solid #ddd; margin-bottom: 5px; border-radius: 4px;">
-                            <span style="font-size: 1.2rem; cursor: move; margin-right: 10px;">☰</span>
-                            
-                            <!-- Hidden info -->
-                            <input type="hidden" name="layout_id[]" value="{{ item.id }}">
-                            <input type="hidden" name="layout_title[]" value="{{ item.title }}">
-                            <input type="hidden" name="layout_type[]" value="{{ item.type }}">
-                            
-                            <!-- Visibility -->
-                            <input type="checkbox" name="layout_visible_{{ item.id }}" style="margin: 0 10px 0 0;" {% if item.visible %}checked{% endif %}>
-                            
-                            <!-- Title (Static for now, or editable if we want) -->
-                            <span style="flex: 1; font-weight: bold;">{{ item.title }}</span>
-                            
-                            <!-- Reorder Buttons -->
-                            <button type="button" onclick="moveUp(this)" style="padding: 2px 8px; margin-right: 5px; background: #95a5a6;">▲</button>
-                            <button type="button" onclick="moveDown(this)" style="padding: 2px 8px; background: #95a5a6;">▼</button>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <p>Düzen verisi bulunamadı. Lütfen önce varsayılanları oluşturun.</p>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <script>
-                function moveUp(btn) {
-                    const item = btn.closest('.layout-item');
-                    const prev = item.previousElementSibling;
-                    if (prev) {
-                        item.parentElement.insertBefore(item, prev);
-                    }
-                }
-                function moveDown(btn) {
-                    const item = btn.closest('.layout-item');
-                    const next = item.nextElementSibling;
-                    if (next) {
-                        item.parentElement.insertBefore(next, item);
-                    }
-                }
-            </script>
-            </div>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <h1>⚙️ Yönetim Paneli</h1>
+        <a href="/admin/logout">🚪 Çıkış Yap</a>
+    </div>
 
-            <!-- Doğum Günleri -->
-            <div class="card" id="section-birthdays">
-                <h2>🎂 Doğum Günleri</h2>
-                <div class="row">
-                    <div class="col">
-                        <h3>Yeni Ekle</h3>
-                        <div style="display: flex; gap: 10px; align-items: flex-end;">
-                            <div style="flex: 1;">
-                                <label>Ad Soyad</label>
-                                <input type="text" name="birthday_name" placeholder="Örn: Ali Veli" style="margin-bottom: 0;">
+    <form method="POST" enctype="multipart/form-data">
+    <div class="admin-layout">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar-nav">
+            <div class="nav-item active" onclick="switchTab('tab-layout')"><span class="nav-icon">🎨</span> Pano Düzeni</div>
+            <div class="nav-item" onclick="switchTab('tab-school')"><span class="nav-icon">🏫</span> Okul Bilgileri</div>
+            <div class="nav-item" onclick="switchTab('tab-birthdays')"><span class="nav-icon">🎂</span> Doğum Günleri</div>
+            <div class="nav-item" onclick="switchTab('tab-duty')"><span class="nav-icon">👮</span> Nöbetçi Öğretmenler</div>
+            <div class="nav-item" onclick="switchTab('tab-schedule')"><span class="nav-icon">📅</span> Ders Saatleri</div>
+            <div class="nav-item" onclick="switchTab('tab-classes')"><span class="nav-icon">📚</span> Sınıf Programları</div>
+            <div class="nav-item" onclick="switchTab('tab-slideshow')"><span class="nav-icon">📽️</span> Slayt Ayarları</div>
+            <div class="nav-item" onclick="switchTab('tab-marquee')"><span class="nav-icon">📜</span> Kayan Yazı</div>
+            <div class="nav-item" onclick="switchTab('tab-countdown')"><span class="nav-icon">⏳</span> Geri Sayım</div>
+            <div class="nav-item" onclick="switchTab('tab-messages')"><span class="nav-icon">📢</span> Mesajlar</div>
+            <div class="nav-item" onclick="switchTab('tab-slides')"><span class="nav-icon">🖼️</span> Slayt Yönetimi</div>
+            <div class="nav-item" onclick="switchTab('tab-system')"><span class="nav-icon">🖥️</span> Sistem</div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            {% if message %}
+            <div class="alert-success">{{ message }}</div>
+            {% endif %}
+
+            <!-- ==================== TAB: Pano Düzeni ==================== -->
+            <div class="tab-panel active" id="tab-layout">
+                <div class="card">
+                    <h2>🎨 Pano Düzeni</h2>
+                    <p style="margin-bottom: 10px; color: #666;">Kartların sırasını ve görünürlüğünü ayarlayın.</p>
+                    <div id="layout-container">
+                        {% if data.layout %}
+                            {% for item in data.layout %}
+                            <div class="layout-item">
+                                <span style="font-size: 1.2rem; cursor: move; margin-right: 10px;">☰</span>
+                                <input type="hidden" name="layout_id[]" value="{{ item.id }}">
+                                <input type="hidden" name="layout_title[]" value="{{ item.title }}">
+                                <input type="hidden" name="layout_type[]" value="{{ item.type }}">
+                                <input type="checkbox" name="layout_visible_{{ item.id }}" style="margin: 0 10px 0 0;" {% if item.visible %}checked{% endif %}>
+                                <span style="flex: 1; font-weight: bold;">{{ item.title }}</span>
+                                <button type="button" onclick="moveUp(this)" style="padding: 2px 8px; margin-right: 5px; background: #95a5a6;">▲</button>
+                                <button type="button" onclick="moveDown(this)" style="padding: 2px 8px; background: #95a5a6;">▼</button>
                             </div>
-                            <div style="flex: 1;">
-                                <label>Doğum Tarihi (G.A)</label>
-                                <input type="text" name="birthday_date" placeholder="Örn: 01.01" style="margin-bottom: 0;">
+                            {% endfor %}
+                        {% else %}
+                            <p>Düzen verisi bulunamadı.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== TAB: Okul Bilgileri ==================== -->
+            <div class="tab-panel" id="tab-school">
+                <div class="card">
+                    <h2>🏫 Okul Bilgileri</h2>
+                    <div class="row">
+                        <div class="col">
+                            <label>Okul Adı</label>
+                            <input type="text" name="school_name" value="{{ data.school_name }}">
+                        </div>
+                        <div class="col">
+                            <label>Bot Giriş Şifresi</label>
+                            <input type="text" name="bot_access_code" value="{{ data.get('bot_access_code', 'okulpanosu') }}" placeholder="okulpanosu">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label>Logo URL (veya Dosya Yükle)</label>
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" name="logo_url" value="{{ data.logo_url }}" placeholder="https://..." style="flex: 1;">
+                                <input type="file" name="logo_file" accept="image/*" style="width: 200px;">
                             </div>
-                            <button type="submit" name="action" value="add_birthday" style="background: #3498db;">Ekle</button>
                         </div>
                     </div>
-                    <div class="col">
-                        <h3>Excel'den İçe Aktar (E-Okul)</h3>
-                        <div style="display: flex; gap: 10px; align-items: flex-end;">
-                            <input type="file" name="birthday_file" accept=".xlsx, .xls" style="margin-bottom: 0;">
-                            <button type="submit" name="action" value="import_birthdays" formenctype="multipart/form-data" style="background: #27ae60;">Yükle</button>
-                        </div>
-                        <small>Not: "Adı Soyadı" ve "Doğum Tarihi" sütunları aranır.</small>
-                    </div>
-                </div>
-                
-                <h3 style="margin-top: 20px;">Kayıtlı Doğum Günleri ({{ data.birthdays | length }})</h3>
-                <input type="text" class="search-input" id="birthday-search" placeholder="🔍 İsim ara..." oninput="filterBirthdays(this.value)">
-                <div style="max-height: 300px; overflow-y: auto;" id="birthday-table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ad Soyad</th>
-                                <th>Tarih</th>
-                                <th>İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for b in data.birthdays %}
-                            <tr>
-                                <td>{{ b.name }}</td>
-                                <td>{{ b.date }}</td>
-                                <td>
-                                    <input type="hidden" name="delete_birthday_name" value="{{ b.name }}" disabled> <!-- JS ile aktif edilecek -->
-                                    <button type="submit" name="action" value="delete_birthday" onclick="this.previousElementSibling.disabled=false; this.parentElement.querySelector('input[name=\'delete_birthday_date\']').disabled=false;" style="background: #e74c3c; padding: 2px 6px;">Sil</button>
-                                    <input type="hidden" name="delete_birthday_date" value="{{ b.date }}" disabled>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr><td colspan="3">Kayıt bulunamadı.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <label>Performans Modu</label>
+                    <select name="performance_mode">
+                        <option value="high" {% if data.performance_mode == 'high' %}selected{% endif %}>Yüksek (Animasyonlu & Canlı)</option>
+                        <option value="low" {% if data.performance_mode == 'low' %}selected{% endif %}>Düşük (Statik & Hızlı)</option>
+                    </select>
+                    <small style="color: #666;">Eğer panoda donma olursa "Düşük" seçiniz.</small>
                 </div>
             </div>
 
-            <!-- Genel Ayarlar -->
-            <div class="card">
-                <h2>🏫 Okul Bilgileri</h2>
-                <div class="row">
-                    <div class="col">
-                        <label>Okul Adı</label>
-                        <input type="text" name="school_name" value="{{ data.school_name }}">
-                    </div>
-                    <div class="col">
-                        <label>Bot Giriş Şifresi</label>
-                        <input type="text" name="bot_access_code" value="{{ data.get('bot_access_code', 'okulpanosu') }}" placeholder="okulpanosu">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <label>Logo URL (veya Dosya Yükle)</label>
-                        <div style="display: flex; gap: 5px;">
-                            <input type="text" name="logo_url" value="{{ data.logo_url }}" placeholder="https://..." style="flex: 1;">
-                            <input type="file" name="logo_file" accept="image/*" style="width: 200px;">
+            <!-- ==================== TAB: Doğum Günleri ==================== -->
+            <div class="tab-panel" id="tab-birthdays">
+                <div class="card">
+                    <h2>🎂 Doğum Günleri</h2>
+                    <div class="row">
+                        <div class="col">
+                            <h3 style="margin-bottom: 10px;">Yeni Ekle</h3>
+                            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                                <div style="flex: 1;">
+                                    <label>Ad Soyad</label>
+                                    <input type="text" name="birthday_name" placeholder="Örn: Ali Veli" style="margin-bottom: 0;">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label>Doğum Tarihi (G.A)</label>
+                                    <input type="text" name="birthday_date" placeholder="Örn: 01.01" style="margin-bottom: 0;">
+                                </div>
+                                <button type="submit" name="action" value="add_birthday" style="background: #3498db;">Ekle</button>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <h3 style="margin-bottom: 10px;">Excel'den İçe Aktar (E-Okul)</h3>
+                            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                                <input type="file" name="birthday_file" accept=".xlsx, .xls" style="margin-bottom: 0;">
+                                <button type="submit" name="action" value="import_birthdays" formenctype="multipart/form-data" style="background: #27ae60;">Yükle</button>
+                            </div>
+                            <small>Not: "Adı Soyadı" ve "Doğum Tarihi" sütunları aranır.</small>
                         </div>
                     </div>
-                </div>
-                <div class="row" style="margin-top: 15px;">
-                     <div class="col">
-                        <label>Performans Modu (Eski Bilgisayarlar İçin)</label>
-                        <select name="performance_mode" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            <option value="high" {% if data.performance_mode == 'high' %}selected{% endif %}>Yüksek (Animasyonlu & Canlı)</option>
-                            <option value="low" {% if data.performance_mode == 'low' %}selected{% endif %}>Düşük (Statik Arkaplan & Hızlı)</option>
-                        </select>
-                        <small style="color: #666;">Eğer panoda donma olursa "Düşük" seçiniz.</small>
-                     </div>
+
+                    <h3 style="margin-top: 20px;">Kayıtlı Doğum Günleri ({{ data.birthdays | length }})</h3>
+                    <input type="text" class="search-input" placeholder="🔍 İsim ara..." oninput="filterBirthdays(this.value)">
+                    <div style="max-height: 350px; overflow-y: auto;" id="birthday-table-container">
+                        <table>
+                            <thead>
+                                <tr><th>Ad Soyad</th><th>Tarih</th><th>İşlem</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for b in data.birthdays %}
+                                <tr>
+                                    <td>{{ b.name }}</td>
+                                    <td>{{ b.date }}</td>
+                                    <td>
+                                        <input type="hidden" name="delete_birthday_name" value="{{ b.name }}" disabled>
+                                        <button type="submit" name="action" value="delete_birthday" onclick="this.previousElementSibling.disabled=false; this.parentElement.querySelector('input[name=\'delete_birthday_date\']').disabled=false;" style="background: #e74c3c; padding: 2px 6px;">Sil</button>
+                                        <input type="hidden" name="delete_birthday_date" value="{{ b.date }}" disabled>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="3">Kayıt bulunamadı.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- Nöbetçi Öğretmenler -->
-            <div class="card">
-                <h2>👮 Nöbetçi Öğretmenler</h2>
-                <p>Nöbet yerlerini ve günlere göre öğretmenleri giriniz.</p>
-                <div style="overflow-x: auto;">
-                    <table id="roster-table">
-                        <thead>
-                            <tr>
-                                <th>Nöbet Yeri</th>
-                                <th>Pazartesi</th>
-                                <th>Salı</th>
-                                <th>Çarşamba</th>
-                                <th>Perşembe</th>
-                                <th>Cuma</th>
-                                <th>İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in data.duty_roster %}
-                            <tr>
-                                <td><input type="text" name="location[]" value="{{ item.location }}" required></td>
-                                <td><input type="text" name="Monday[]" value="{{ item.schedule.Monday }}"></td>
-                                <td><input type="text" name="Tuesday[]" value="{{ item.schedule.Tuesday }}"></td>
-                                <td><input type="text" name="Wednesday[]" value="{{ item.schedule.Wednesday }}"></td>
-                                <td><input type="text" name="Thursday[]" value="{{ item.schedule.Thursday }}"></td>
-                                <td><input type="text" name="Friday[]" value="{{ item.schedule.Friday }}"></td>
-                                <td><button type="button" onclick="removeRow(this)" style="background: #e74c3c; padding: 5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">Sil</button></td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td><input type="text" name="location[]" placeholder="Yer Adı" required></td>
-                                <td><input type="text" name="Monday[]"></td>
-                                <td><input type="text" name="Tuesday[]"></td>
-                                <td><input type="text" name="Wednesday[]"></td>
-                                <td><input type="text" name="Thursday[]"></td>
-                                <td><input type="text" name="Friday[]"></td>
-                                <td><button type="button" onclick="removeRow(this)" style="background: #e74c3c; padding: 5px 10px; color:white; border:none; border-radius:4px; cursor:pointer;">Sil</button></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <button type="button" onclick="addLocation()" style="background: #3498db; margin-top: 10px;">+ Yeni Nöbet Yeri Ekle</button>
-                
-                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
-                
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
+            <!-- ==================== TAB: Nöbetçi Öğretmenler ==================== -->
+            <div class="tab-panel" id="tab-duty">
+                <div class="card">
+                    <h2>👮 Nöbetçi Öğretmenler</h2>
+                    <p style="margin-bottom: 10px; color: #666;">Nöbet yerlerini ve günlere göre öğretmenleri giriniz.</p>
+                    <div style="overflow-x: auto;">
+                        <table id="roster-table">
+                            <thead>
+                                <tr>
+                                    <th>Nöbet Yeri</th>
+                                    <th>Pazartesi</th><th>Salı</th><th>Çarşamba</th><th>Perşembe</th><th>Cuma</th>
+                                    <th>İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data.duty_roster %}
+                                <tr>
+                                    <td><input type="text" name="location[]" value="{{ item.location }}" required></td>
+                                    <td><input type="text" name="Monday[]" value="{{ item.schedule.Monday }}"></td>
+                                    <td><input type="text" name="Tuesday[]" value="{{ item.schedule.Tuesday }}"></td>
+                                    <td><input type="text" name="Wednesday[]" value="{{ item.schedule.Wednesday }}"></td>
+                                    <td><input type="text" name="Thursday[]" value="{{ item.schedule.Thursday }}"></td>
+                                    <td><input type="text" name="Friday[]" value="{{ item.schedule.Friday }}"></td>
+                                    <td><button type="button" onclick="removeRow(this)" style="background: #e74c3c; padding: 5px 10px;">Sil</button></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="button" onclick="addLocation()" style="background: #3498db; margin-top: 10px;">+ Yeni Nöbet Yeri</button>
+
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                         <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                             <input type="checkbox" name="auto_rotate" onchange="this.form.submit()" {% if data.duty_rotation and data.duty_rotation.auto_rotate %}checked{% endif %}>
                             <strong>Otomatik Döndür (Her Hafta)</strong>
                         </label>
-                    </div>
-                    
-                    <div>
-                        <button type="submit" name="action" value="rotate_now" style="background: #e67e22; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">
-                            🔄 Nöbetleri Şimdi Döndür (Manuel)
-                        </button>
+                        <button type="submit" name="action" value="rotate_now" style="background: #e67e22;">🔄 Manuel Döndür</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Slideshow Settings -->
-            <div class="card">
-                <h2>📽️ Slayt Ayarları</h2>
-                <div class="form-group">
-                    <label>Slayt Süresi (Saniye):</label>
-                    <input type="number" name="slideshow_duration" value="{{ (data.slideshow.duration / 1000) | int if data.slideshow else 10 }}" min="3" max="60" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px;">
-                </div>
-                <div class="form-group">
-                    <label>Geçiş Efekti:</label>
-                    <select name="slideshow_transition" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px;">
-                        <option value="fade" {% if data.slideshow.transition == 'fade' %}selected{% endif %}>Soluklaşarak (Fade)</option>
-                        <option value="slide" {% if data.slideshow.transition == 'slide' %}selected{% endif %}>Kayarak (Sola)</option>
-                        <option value="zoom" {% if data.slideshow.transition == 'zoom' %}selected{% endif %}>Büyüyerek (Zoom)</option>
-                        <option value="flip" {% if data.slideshow.transition == 'flip' %}selected{% endif %}>Dönerek (Flip)</option>
-                        <option value="blur" {% if data.slideshow.transition == 'blur' %}selected{% endif %}>Bulanıklaşarak (Blur)</option>
-                        <option value="rotate" {% if data.slideshow.transition == 'rotate' %}selected{% endif %}>Tam Tur (Rotate)</option>
-                        <option value="slide-up" {% if data.slideshow.transition == 'slide-up' %}selected{% endif %}>Yukarı Kayarak</option>
-                        <option value="slide-down" {% if data.slideshow.transition == 'slide-down' %}selected{% endif %}>Aşağı Kayarak</option>
-                        <option value="random" {% if data.slideshow.transition == 'random' %}selected{% endif %}>Rastgele (8 Efekt)</option>
-                        <option value="none" {% if data.slideshow.transition == 'none' %}selected{% endif %}>Yok</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Sıralama:</label>
-                    <select name="slideshow_order" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px;">
-                        <option value="newest" {% if data.slideshow.order == 'newest' %}selected{% endif %}>En Yeni İlk</option>
-                        <option value="oldest" {% if data.slideshow.order == 'oldest' %}selected{% endif %}>En Eski İlk</option>
-                        <option value="random" {% if data.slideshow.order == 'random' %}selected{% endif %}>Karışık</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Görüntü Modu:</label>
-                    <select name="slideshow_fit_mode" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px;">
-                        <option value="contain" {% if data.slideshow.fit_mode == 'contain' %}selected{% endif %}>Sığdır (Tamamı görünsün)</option>
-                        <option value="cover" {% if data.slideshow.fit_mode == 'cover' %}selected{% endif %}>Doldur (Boşluk kalmasın)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Geri Sayım -->
-            <div class="card">
-                <h2>⏳ Geri Sayım</h2>
-                <div class="row">
-                    <div class="col">
-                        <label>Etkinlik Adı (örn: YKS'ye Kalan)</label>
-                        <input type="text" name="countdown_label" value="{{ data.countdown.label }}">
-                    </div>
-                    <div class="col">
-                        <label>Hedef Tarih</label>
-                        <input type="datetime-local" name="countdown_date" value="{{ data.countdown.target_date }}">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kayan Yazı Ayarları -->
-            <div class="card">
-                <h2>📜 Kayan Yazı Ayarları</h2>
-                <div class="row">
-                    <div class="col">
-                        <label>Yazı Boyutu (rem)</label>
-                        <input type="number" step="0.1" name="marquee_font_size" value="{{ data.marquee.font_size if data.marquee else '1.2' }}">
-                    </div>
-                    <div class="col">
-                        <label>Hız (Saniye - Düşük değer daha hızlı)</label>
-                        <input type="number" name="marquee_duration" value="{{ data.marquee.duration if data.marquee else '30' }}">
-                    </div>
-                </div>
-                <div class="row" style="margin-top: 10px;">
-                    <div class="col">
-                        <label>Yazı Rengi</label>
-                        <input type="color" name="marquee_color" value="{{ data.marquee.color if data.marquee else '#2c3e50' }}" style="width: 100%; height: 40px;">
-                    </div>
-                    <div class="col">
-                         <label>Yazı Tipi</label>
-                         <select name="marquee_font_family" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                             <option value="'Roboto', sans-serif" {% if data.marquee and data.marquee.font_family == "'Roboto', sans-serif" %}selected{% endif %}>Roboto (Varsayılan)</option>
-                             <option value="'Courier New', monospace" {% if data.marquee and data.marquee.font_family == "'Courier New', monospace" %}selected{% endif %}>Daktilo (Courier)</option>
-                             <option value="'Georgia', serif" {% if data.marquee and data.marquee.font_family == "'Georgia', serif" %}selected{% endif %}>Kitap (Georgia)</option>
-                             <option value="'Arial Black', sans-serif" {% if data.marquee and data.marquee.font_family == "'Arial Black', sans-serif" %}selected{% endif %}>Kalın (Arial Black)</option>
-                             <option value="'Comic Sans MS', cursive" {% if data.marquee and data.marquee.font_family == "'Comic Sans MS', cursive" %}selected{% endif %}>El Yazısı (Comic Sans)</option>
-                         </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Mesajlar -->
-            <div class="card">
-                <h2>📢 Günün Sözleri / Mesajlar</h2>
-                <label>Her satıra bir mesaj yazın:</label>
-                <textarea name="messages" class="messages-area">{{ data.messages | join('\n') }}</textarea>
-            </div>
-
-            <!-- Ders Programı (Card UI) -->
-            <div class="card">
-                <h2>📅 Ders Saatleri</h2>
-                <div id="schedule-container" style="display: flex; flex-wrap: wrap; gap: 15px;">
-                    {% for item in data.schedule %}
-                    <div class="schedule-card" style="background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 200px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <label>Ders/Etkinlik Adı</label>
-                        <input type="text" name="schedule_name[]" value="{{ item.name }}" required>
-                        <label>Başlangıç</label>
-                        <input type="time" name="schedule_start[]" value="{{ item.start }}" required>
-                        <label>Bitiş</label>
-                        <input type="time" name="schedule_end[]" value="{{ item.end }}" required>
-                        <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 10px;">Sil</button>
-                    </div>
-                    {% endfor %}
-                </div>
-                <button type="button" onclick="addScheduleCard()" style="background: #27ae60; margin-top: 15px;">+ Yeni Ders/Etkinlik Ekle</button>
-            </div>
-
-            <script>
-                function addScheduleCard() {
-                    const container = document.getElementById('schedule-container');
-                    const div = document.createElement('div');
-                    div.className = 'schedule-card';
-                    div.style = 'background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 200px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05);';
-                    div.innerHTML = `
-                        <label>Ders/Etkinlik Adı</label>
-                        <input type="text" name="schedule_name[]" placeholder="Örn: 9. Ders" required>
-                        <label>Başlangıç</label>
-                        <input type="time" name="schedule_start[]" required>
-                        <label>Bitiş</label>
-                        <input type="time" name="schedule_end[]" required>
-                        <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 10px;">Sil</button>
-                    `;
-                    container.appendChild(div);
-                }
-            </script>
-
-            <!-- Sınıf Ders Programları -->
-            <div class="card">
-                <h2>📚 Sınıf Ders Programları</h2>
-                <div style="display: flex; gap: 20px;">
-                    <!-- Sol Taraf: Sınıf Listesi -->
-                    <div style="width: 200px; border-right: 1px solid #ddd; padding-right: 10px;">
-                        <h3>Sınıflar</h3>
-                        <div id="class-list" style="display: flex; flex-direction: column; gap: 5px;">
-                            {% for item in data.class_schedules %}
-                            <div class="class-item" onclick="showClassSchedule('{{ loop.index0 }}')" style="padding: 10px; background: #eee; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>{{ item.name }}</span>
-                                <input type="hidden" name="class_names[]" value="{{ item.name }}">
-                                <button type="button" onclick="removeClass(this)" style="background: #e74c3c; padding: 2px 6px; font-size: 0.8rem;">X</button>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <button type="button" onclick="addClass()" style="width: 100%; margin-top: 10px; background: #3498db;">+ Sınıf Ekle</button>
-                    </div>
-
-                    <!-- Sağ Taraf: Ders Programı Tablosu -->
-                    <div style="flex: 1; overflow-x: auto;">
-                        {% for item in data.class_schedules %}
-                        <div class="schedule-table-wrapper" id="schedule-{{ loop.index0 }}" style="display: {% if loop.first %}block{% else %}none{% endif %};">
-                            <h3>{{ item.name }} - Haftalık Program</h3>
-                            <input type="text" name="class_name_{{ loop.index0 }}" value="{{ item.name }}" placeholder="Sınıf Adı (örn: 9-A)" style="margin-bottom: 10px; width: 200px;">
-                            
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th style="width: 100px;">Gün</th>
-                                        <!-- Assuming max 10 periods for now -->
-                                        {% for i in range(1, 9) %}
-                                        <th>{{ i }}</th>
-                                        {% endfor %}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% set days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] %}
-                                    {% set tr_days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'] %}
-                                    {% for day in days %}
-                                    <tr>
-                                        <td><strong>{{ tr_days[loop.index0] }}</strong></td>
-                                        {% set day_lessons = item.program.get(day, []) %}
-                                        {% for i in range(8) %}
-                                        <td>
-                                            <input type="text" name="schedule_{{ loop.index0 }}_{{ day }}[]" value="{{ day_lessons[i] if i < day_lessons|length else '' }}" style="width: 100%;">
-                                        </td>
-                                        {% endfor %}
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+            <!-- ==================== TAB: Ders Saatleri ==================== -->
+            <div class="tab-panel" id="tab-schedule">
+                <div class="card">
+                    <h2>📅 Ders Saatleri</h2>
+                    <div id="schedule-container" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                        {% for item in data.schedule %}
+                        <div class="schedule-card" style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 200px;">
+                            <label>Ders/Etkinlik Adı</label>
+                            <input type="text" name="schedule_name[]" value="{{ item.name }}" required>
+                            <label>Başlangıç</label>
+                            <input type="time" name="schedule_start[]" value="{{ item.start }}" required>
+                            <label>Bitiş</label>
+                            <input type="time" name="schedule_end[]" value="{{ item.end }}" required>
+                            <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 10px;">Sil</button>
                         </div>
                         {% endfor %}
                     </div>
+                    <button type="button" onclick="addScheduleCard()" style="background: #3498db; margin-top: 15px;">+ Yeni Ders/Etkinlik</button>
                 </div>
             </div>
 
-            <script>
-                // ... Existing scripts ...
-
-                function showClassSchedule(index) {
-                    // Hide all
-                    document.querySelectorAll('.schedule-table-wrapper').forEach(el => el.style.display = 'none');
-                    document.querySelectorAll('.class-item').forEach(el => el.style.background = '#eee');
-                    
-                    // Show selected
-                    const selected = document.getElementById('schedule-' + index);
-                    if (selected) {
-                        selected.style.display = 'block';
-                    }
-                    
-                    // Highlight active button (optional)
-                    // event logic implies looking up the clicked element, but basic toggle is fine for now.
-                }
-
-                function addClass() {
-                    // Logic to add a new class is complex due to the nested table structure.
-                    // Ideally, we would clone a template. For simplicity in this demo, 
-                    // we might need a page reload or a more robust JS framework.
-                    // Let's implemented a simple prompt for now that creates DOM elements.
-                    
-                    const classList = document.getElementById('class-list');
-                    const wrapperContainer = document.querySelector('.schedule-table-wrapper').parentElement;
-                    
-                    const newIndex = document.querySelectorAll('.schedule-table-wrapper').length;
-                    const className = prompt("Yeni Sınıf Adı:", "11-A");
-                    
-                    if (!className) return;
-
-                    // Add to sidebar
-                    const div = document.createElement('div');
-                    div.className = 'class-item';
-                    div.style = 'padding: 10px; background: #eee; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;';
-                    div.onclick = function() { showClassSchedule(newIndex); };
-                    div.innerHTML = `
-                        <span>${className}</span>
-                        <input type="hidden" name="class_names[]" value="${className}">
-                        <button type="button" onclick="removeClass(this)" style="background: #e74c3c; padding: 2px 6px; font-size: 0.8rem;">X</button>
-                    `;
-                    classList.appendChild(div);
-
-                    // Add table content
-                    // (Cloning the first table structure for simplicity)
-                    const firstWrapper = document.querySelector('.schedule-table-wrapper');
-                    const newWrapper = firstWrapper.cloneNode(true);
-                    newWrapper.id = 'schedule-' + newIndex;
-                    newWrapper.style.display = 'none';
-                    
-                    // Update main class name input
-                    newWrapper.querySelector('h3').textContent = className + ' - Haftalık Program';
-                    const nameInput = newWrapper.querySelector('input[name^="class_name_"]');
-                    nameInput.name = 'class_name_' + newIndex;
-                    nameInput.value = className;
-
-                    // Clear and Update inputs
-                    const inputs = newWrapper.querySelectorAll('input[type="text"]');
-                    inputs.forEach(input => {
-                        if (input.name.startsWith('schedule_')) {
-                            // format: schedule_0_Monday[] -> schedule_newIndex_Monday[]
-                            const oldName = input.name;
-                            const parts = oldName.split('_');
-                            // parts: ['schedule', '0', 'Monday[]']
-                            input.name = `schedule_${newIndex}_${parts[2]}`;
-                            input.value = '';
-                        }
-                    });
-                    
-                    wrapperContainer.appendChild(newWrapper);
-                    showClassSchedule(newIndex);
-                }
-
-                function removeClass(btn) {
-                    if (confirm('Sınıfı silmek istediğinize emin misiniz?')) {
-                        // This removes the visual elements but index management might get messy 
-                        // if we rely on loop.index0 in backend. 
-                        // However, backend can re-parse based on available keys.
-                        btn.parentElement.remove();
-                        // Also remove the corresponding table wrapper? 
-                        // Matching them by index is hard after deletion.
-                        // A reload is safer, but let's just warn user to save.
-                    }
-                }
-            </script>
-
-            <script>
-                function addLocation() {
-                    const tbody = document.querySelector('#roster-table tbody');
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><input type="text" name="location[]" placeholder="Yer Adı" required></td>
-                        <td><input type="text" name="Monday[]"></td>
-                        <td><input type="text" name="Tuesday[]"></td>
-                        <td><input type="text" name="Wednesday[]"></td>
-                        <td><input type="text" name="Thursday[]"></td>
-                        <td><input type="text" name="Friday[]"></td>
-                        <td><button type="button" onclick="removeRow(this)" style="background: #e74c3c; padding: 5px 10px;">Sil</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                }
-
-                function removeRow(btn) {
-                    const row = btn.closest('tr');
-                    if (document.querySelectorAll('#roster-table tbody tr').length > 1) {
-                        row.remove();
-                    } else {
-                        alert('En az bir nöbet yeri kalmalıdır.');
-                    }
-                }
-            </script>
-
-            <!-- Sistem Özellikleri -->
-            <div class="card" style="border: 2px solid #3498db;">
-                <h2>🖥️ Sistem ve Başlangıç</h2>
-                <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-                    
-                    <button type="button" onclick="openSlidesFolder()" style="background: #e67e22; display: flex; align-items: center; gap: 5px;">
-                        📂 Slayt Klasörünü Aç
-                    </button>
-
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                        <input type="checkbox" id="autostart_checkbox" onchange="toggleAutostart(this)" style="margin: 0;">
-                        <span>Windows Başlangıcında Otomatik Çalıştır</span>
-                    </label>
-
-                    <span id="system-msg" style="color: #27ae60; font-weight: bold;"></span>
+            <!-- ==================== TAB: Sınıf Ders Programları ==================== -->
+            <div class="tab-panel" id="tab-classes">
+                <div class="card">
+                    <h2>📚 Sınıf Ders Programları</h2>
+                    <div style="display: flex; gap: 20px;">
+                        <div style="width: 180px; border-right: 1px solid #ddd; padding-right: 10px;">
+                            <h3 style="margin-bottom: 8px;">Sınıflar</h3>
+                            <div id="class-list" style="display: flex; flex-direction: column; gap: 5px;">
+                                {% for item in data.class_schedules %}
+                                <div class="class-item" onclick="showClassSchedule('{{ loop.index0 }}')" style="padding: 8px; background: #f0f0f0; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
+                                    <span>{{ item.name }}</span>
+                                    <input type="hidden" name="class_names[]" value="{{ item.name }}">
+                                    <button type="button" onclick="removeClass(this)" style="background: #e74c3c; padding: 2px 6px; font-size: 0.75rem;">X</button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button type="button" onclick="addClass()" style="width: 100%; margin-top: 10px; background: #3498db; font-size: 0.85rem;">+ Sınıf Ekle</button>
+                        </div>
+                        <div style="flex: 1; overflow-x: auto;">
+                            {% for item in data.class_schedules %}
+                            <div class="schedule-table-wrapper" id="schedule-{{ loop.index0 }}" style="display: {% if loop.first %}block{% else %}none{% endif %};">
+                                <h3>{{ item.name }} - Haftalık Program</h3>
+                                <input type="text" name="class_name_{{ loop.index0 }}" value="{{ item.name }}" placeholder="Sınıf Adı" style="margin-bottom: 10px; width: 200px;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 100px;">Gün</th>
+                                            {% for i in range(1, 9) %}<th>{{ i }}</th>{% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% set days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] %}
+                                        {% set tr_days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'] %}
+                                        {% for day in days %}
+                                        <tr>
+                                            <td><strong>{{ tr_days[loop.index0] }}</strong></td>
+                                            {% set day_lessons = item.program.get(day, []) %}
+                                            {% for i in range(8) %}
+                                            <td><input type="text" name="schedule_{{ loop.index0 }}_{{ day }}[]" value="{{ day_lessons[i] if i < day_lessons|length else '' }}" style="width: 100%;"></td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Slayt Yönetimi -->
-            <div class="card">
-                <h2>🖼️ Slayt Yönetimi</h2>
-                <p>Yüklenmiş slaytları görüntüleyin ve silin.</p>
-                <div id="slides-grid" class="slide-grid">
-                    <p>Yükleniyor...</p>
+            <!-- ==================== TAB: Slayt Ayarları ==================== -->
+            <div class="tab-panel" id="tab-slideshow">
+                <div class="card">
+                    <h2>📽️ Slayt Ayarları</h2>
+                    <div class="row">
+                        <div class="col">
+                            <label>Slayt Süresi (Saniye)</label>
+                            <input type="number" name="slideshow_duration" value="{{ (data.slideshow.duration / 1000) | int if data.slideshow else 10 }}" min="3" max="60">
+                        </div>
+                        <div class="col">
+                            <label>Geçiş Efekti</label>
+                            <select name="slideshow_transition">
+                                <option value="fade" {% if data.slideshow.transition == 'fade' %}selected{% endif %}>Soluklaşarak (Fade)</option>
+                                <option value="slide" {% if data.slideshow.transition == 'slide' %}selected{% endif %}>Kayarak (Sola)</option>
+                                <option value="zoom" {% if data.slideshow.transition == 'zoom' %}selected{% endif %}>Büyüyerek (Zoom)</option>
+                                <option value="flip" {% if data.slideshow.transition == 'flip' %}selected{% endif %}>Dönerek (Flip)</option>
+                                <option value="blur" {% if data.slideshow.transition == 'blur' %}selected{% endif %}>Bulanıklaşarak (Blur)</option>
+                                <option value="rotate" {% if data.slideshow.transition == 'rotate' %}selected{% endif %}>Tam Tur (Rotate)</option>
+                                <option value="slide-up" {% if data.slideshow.transition == 'slide-up' %}selected{% endif %}>Yukarı Kayarak</option>
+                                <option value="slide-down" {% if data.slideshow.transition == 'slide-down' %}selected{% endif %}>Aşağı Kayarak</option>
+                                <option value="random" {% if data.slideshow.transition == 'random' %}selected{% endif %}>Rastgele</option>
+                                <option value="none" {% if data.slideshow.transition == 'none' %}selected{% endif %}>Yok</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label>Sıralama</label>
+                            <select name="slideshow_order">
+                                <option value="newest" {% if data.slideshow.order == 'newest' %}selected{% endif %}>En Yeni İlk</option>
+                                <option value="oldest" {% if data.slideshow.order == 'oldest' %}selected{% endif %}>En Eski İlk</option>
+                                <option value="random" {% if data.slideshow.order == 'random' %}selected{% endif %}>Karışık</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label>Görüntü Modu</label>
+                            <select name="slideshow_fit_mode">
+                                <option value="contain" {% if data.slideshow.fit_mode == 'contain' %}selected{% endif %}>Sığdır (Tamamı görünsün)</option>
+                                <option value="cover" {% if data.slideshow.fit_mode == 'cover' %}selected{% endif %}>Doldur (Boşluk kalmasın)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <script>
-                async function loadSlides() {
-                    try {
-                        const res = await fetch('/api/get_slides_with_info');
-                        const slides = await res.json();
-                        const grid = document.getElementById('slides-grid');
-                        grid.innerHTML = '';
-                        if (slides.length === 0) {
-                            grid.innerHTML = '<p>Hiç slayt bulunamadı.</p>';
-                            return;
-                        }
-                        slides.forEach(slide => {
-                            const div = document.createElement('div');
-                            div.className = 'slide-item';
-                            let media;
-                            if (slide.type === 'image') {
-                                media = `<img src="${slide.url}" alt="${slide.name}" loading="lazy">`;
-                            } else {
-                                media = `<video src="${slide.url}" muted></video>`;
-                            }
-                            div.innerHTML = `
-                                ${media}
-                                <div class="info">${slide.size}</div>
-                                <button type="button" onclick="deleteSlide('${slide.name}', this)">Sil</button>
-                            `;
-                            grid.appendChild(div);
-                        });
-                    } catch(e) {
-                        console.error(e);
-                    }
-                }
+            <!-- ==================== TAB: Kayan Yazı ==================== -->
+            <div class="tab-panel" id="tab-marquee">
+                <div class="card">
+                    <h2>📜 Kayan Yazı Ayarları</h2>
+                    <div class="row">
+                        <div class="col">
+                            <label>Yazı Boyutu (rem)</label>
+                            <input type="number" step="0.1" name="marquee_font_size" value="{{ data.marquee.font_size if data.marquee else '1.2' }}">
+                        </div>
+                        <div class="col">
+                            <label>Hız (Saniye - Düşük = Hızlı)</label>
+                            <input type="number" name="marquee_duration" value="{{ data.marquee.duration if data.marquee else '30' }}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label>Yazı Rengi</label>
+                            <input type="color" name="marquee_color" value="{{ data.marquee.color if data.marquee else '#2c3e50' }}" style="width: 100%; height: 40px;">
+                        </div>
+                        <div class="col">
+                            <label>Yazı Tipi</label>
+                            <select name="marquee_font_family">
+                                <option value="'Roboto', sans-serif" {% if data.marquee and data.marquee.font_family == "'Roboto', sans-serif" %}selected{% endif %}>Roboto (Varsayılan)</option>
+                                <option value="'Courier New', monospace" {% if data.marquee and data.marquee.font_family == "'Courier New', monospace" %}selected{% endif %}>Daktilo (Courier)</option>
+                                <option value="'Georgia', serif" {% if data.marquee and data.marquee.font_family == "'Georgia', serif" %}selected{% endif %}>Kitap (Georgia)</option>
+                                <option value="'Arial Black', sans-serif" {% if data.marquee and data.marquee.font_family == "'Arial Black', sans-serif" %}selected{% endif %}>Kalın (Arial Black)</option>
+                                <option value="'Comic Sans MS', cursive" {% if data.marquee and data.marquee.font_family == "'Comic Sans MS', cursive" %}selected{% endif %}>El Yazısı (Comic Sans)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                async function deleteSlide(filename, btn) {
-                    if (!confirm(`"${filename}" silinsin mi?`)) return;
-                    btn.textContent = 'Siliniyor...';
-                    try {
-                        const res = await fetch('/api/delete_slide', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({filename: filename})
-                        });
-                        const data = await res.json();
-                        if (data.status === 'success') {
-                            btn.closest('.slide-item').remove();
-                        } else {
-                            alert('Hata: ' + data.message);
-                            btn.textContent = 'Sil';
-                        }
-                    } catch(e) {
-                        alert('Bağlantı hatası');
-                        btn.textContent = 'Sil';
-                    }
-                }
+            <!-- ==================== TAB: Geri Sayım ==================== -->
+            <div class="tab-panel" id="tab-countdown">
+                <div class="card">
+                    <h2>⏳ Geri Sayım</h2>
+                    <div class="row">
+                        <div class="col">
+                            <label>Etkinlik Adı (örn: YKS'ye Kalan)</label>
+                            <input type="text" name="countdown_label" value="{{ data.countdown.label }}">
+                        </div>
+                        <div class="col">
+                            <label>Hedef Tarih</label>
+                            <input type="datetime-local" name="countdown_date" value="{{ data.countdown.target_date }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                loadSlides();
-            </script>
+            <!-- ==================== TAB: Mesajlar ==================== -->
+            <div class="tab-panel" id="tab-messages">
+                <div class="card">
+                    <h2>📢 Günün Sözleri / Mesajlar</h2>
+                    <label>Her satıra bir mesaj yazın:</label>
+                    <textarea name="messages" style="height: 200px;">{{ data.messages | join('\n') }}</textarea>
+                </div>
+            </div>
 
-            <script>
-                async function openSlidesFolder() {
-                    const btn = event.target;
-                    const originalText = btn.innerText;
-                    btn.innerText = "Açılıyor...";
-                    try {
-                        const res = await fetch('/api/open_slides_folder');
-                        const data = await res.json();
-                        if(data.status !== 'success') alert('Hata: ' + data.message);
-                    } catch(e) {
-                        alert('Bağlantı hatası');
-                    }
-                    setTimeout(() => btn.innerText = originalText, 1000);
-                }
+            <!-- ==================== TAB: Slayt Yönetimi ==================== -->
+            <div class="tab-panel" id="tab-slides">
+                <div class="card">
+                    <h2>🖼️ Slayt Yönetimi</h2>
+                    <p style="color: #666;">Yüklenmiş slaytları görüntüleyin ve silin.</p>
+                    <div id="slides-grid" class="slide-grid"><p>Yükleniyor...</p></div>
+                </div>
+            </div>
 
-                async function toggleAutostart(cb) {
-                    const statusMsg = document.getElementById('system-msg');
-                    statusMsg.innerText = "Ayarlanıyor...";
-                    try {
-                        const res = await fetch('/api/toggle_autostart', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ enable: cb.checked })
-                        });
-                        const data = await res.json();
-                        statusMsg.innerText = data.message;
-                        setTimeout(() => statusMsg.innerText = "", 3000);
-                    } catch(e) {
-                        statusMsg.innerText = "Hata oluştu!";
-                        cb.checked = !cb.checked; // Revert
-                    }
-                }
+            <!-- ==================== TAB: Sistem ==================== -->
+            <div class="tab-panel" id="tab-system">
+                <div class="card" style="border: 2px solid #3498db;">
+                    <h2>🖥️ Sistem ve Başlangıç</h2>
+                    <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                        <button type="button" onclick="openSlidesFolder()" style="background: #e67e22;">📂 Slayt Klasörünü Aç</button>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            <input type="checkbox" id="autostart_checkbox" onchange="toggleAutostart(this)" style="margin: 0;">
+                            <span>Windows Başlangıcında Otomatik Çalıştır</span>
+                        </label>
+                        <span id="system-msg" style="color: #27ae60; font-weight: bold;"></span>
+                    </div>
+                </div>
+            </div>
 
-                // Check status on load
-                (async () => {
-                    try {
-                        const res = await fetch('/api/get_autostart_status');
-                        const data = await res.json();
-                        document.getElementById('autostart_checkbox').checked = data.enabled;
-                    } catch(e) { console.error(e); }
-                })();
-            </script>
-
-            <button type="submit" name="action" value="save_settings">💾 Kaydet ve Yayınla</button>
-            <a href="/" style="margin-left: 20px; text-decoration: none; color: #555;">← Panoya Dön</a>
-        </form>
+            <!-- Save Bar (sticky at bottom) -->
+            <div class="save-bar">
+                <button type="submit" name="action" value="save_settings">💾 Kaydet ve Yayınla</button>
+                <a href="/" style="text-decoration: none; color: #555;">← Panoya Dön</a>
+            </div>
+        </div>
     </div>
+    </form>
 
     <script>
-        // ===== Collapsible Sections =====
-        function toggleSection(card) {
-            card.classList.toggle('collapsed');
+        // ===== Tab Navigation =====
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
         }
 
-        // Auto-wrap all card contents into card-body on load
-        document.addEventListener('DOMContentLoaded', function() {
-            const cards = document.querySelectorAll('form > .card');
-            cards.forEach((card, index) => {
-                const h2 = card.querySelector('h2');
-                if (!h2) return;
-                
-                // Wrap all content after h2 into a card-body div
-                const body = document.createElement('div');
-                body.className = 'card-body';
-                
-                const children = Array.from(card.childNodes);
-                let afterH2 = false;
-                children.forEach(child => {
-                    if (child === h2) {
-                        afterH2 = true;
-                        return;
-                    }
-                    if (afterH2) {
-                        body.appendChild(child);
-                    }
-                });
-                card.appendChild(body);
-                
-                // Make h2 clickable
-                h2.addEventListener('click', function(e) {
-                    // Don't collapse if clicking a button/input inside h2
-                    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-                    toggleSection(card);
-                });
-                
-                // Start collapsed except first 2 sections
-                if (index >= 2) {
-                    card.classList.add('collapsed');
-                }
-            });
-        });
+        // ===== Layout Reorder =====
+        function moveUp(btn) {
+            const item = btn.closest('.layout-item');
+            const prev = item.previousElementSibling;
+            if (prev) item.parentElement.insertBefore(item, prev);
+        }
+        function moveDown(btn) {
+            const item = btn.closest('.layout-item');
+            const next = item.nextElementSibling;
+            if (next) item.parentElement.insertBefore(next, item);
+        }
 
-        // ===== Birthday Search Filter =====
+        // ===== Birthday Search =====
         function filterBirthdays(query) {
-            const container = document.getElementById('birthday-table-container');
-            if (!container) return;
-            const rows = container.querySelectorAll('tbody tr');
+            const rows = document.querySelectorAll('#birthday-table-container tbody tr');
             const q = query.toLowerCase();
             rows.forEach(row => {
                 const name = row.cells[0] ? row.cells[0].textContent.toLowerCase() : '';
                 row.style.display = name.includes(q) ? '' : 'none';
             });
         }
+
+        // ===== Duty Roster =====
+        function addLocation() {
+            const tbody = document.querySelector('#roster-table tbody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" name="location[]" placeholder="Yer Adı" required></td>
+                <td><input type="text" name="Monday[]"></td>
+                <td><input type="text" name="Tuesday[]"></td>
+                <td><input type="text" name="Wednesday[]"></td>
+                <td><input type="text" name="Thursday[]"></td>
+                <td><input type="text" name="Friday[]"></td>
+                <td><button type="button" onclick="removeRow(this)" style="background: #e74c3c; padding: 5px 10px;">Sil</button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+        function removeRow(btn) {
+            const row = btn.closest('tr');
+            if (document.querySelectorAll('#roster-table tbody tr').length > 1) {
+                row.remove();
+            } else {
+                alert('En az bir nöbet yeri kalmalıdır.');
+            }
+        }
+
+        // ===== Schedule Cards =====
+        function addScheduleCard() {
+            const container = document.getElementById('schedule-container');
+            const div = document.createElement('div');
+            div.className = 'schedule-card';
+            div.style = 'background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 200px;';
+            div.innerHTML = `
+                <label>Ders/Etkinlik Adı</label>
+                <input type="text" name="schedule_name[]" placeholder="Örn: 9. Ders" required>
+                <label>Başlangıç</label>
+                <input type="time" name="schedule_start[]" required>
+                <label>Bitiş</label>
+                <input type="time" name="schedule_end[]" required>
+                <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 10px;">Sil</button>
+            `;
+            container.appendChild(div);
+        }
+
+        // ===== Class Schedule =====
+        function showClassSchedule(index) {
+            document.querySelectorAll('.schedule-table-wrapper').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.class-item').forEach(el => el.style.background = '#f0f0f0');
+            const selected = document.getElementById('schedule-' + index);
+            if (selected) selected.style.display = 'block';
+        }
+
+        function addClass() {
+            const classList = document.getElementById('class-list');
+            const wrapperContainer = document.querySelector('.schedule-table-wrapper') ? document.querySelector('.schedule-table-wrapper').parentElement : null;
+            const newIndex = document.querySelectorAll('.schedule-table-wrapper').length;
+            const className = prompt("Yeni Sınıf Adı:", "11-A");
+            if (!className) return;
+
+            const div = document.createElement('div');
+            div.className = 'class-item';
+            div.style = 'padding: 8px; background: #f0f0f0; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;';
+            div.onclick = function() { showClassSchedule(newIndex); };
+            div.innerHTML = `<span>${className}</span><input type="hidden" name="class_names[]" value="${className}"><button type="button" onclick="removeClass(this)" style="background: #e74c3c; padding: 2px 6px; font-size: 0.75rem;">X</button>`;
+            classList.appendChild(div);
+
+            if (wrapperContainer) {
+                const firstWrapper = document.querySelector('.schedule-table-wrapper');
+                const newWrapper = firstWrapper.cloneNode(true);
+                newWrapper.id = 'schedule-' + newIndex;
+                newWrapper.style.display = 'none';
+                newWrapper.querySelector('h3').textContent = className + ' - Haftalık Program';
+                const nameInput = newWrapper.querySelector('input[name^="class_name_"]');
+                nameInput.name = 'class_name_' + newIndex;
+                nameInput.value = className;
+                newWrapper.querySelectorAll('input[type="text"]').forEach(input => {
+                    if (input.name.startsWith('schedule_')) {
+                        const parts = input.name.split('_');
+                        input.name = `schedule_${newIndex}_${parts[2]}`;
+                        input.value = '';
+                    }
+                });
+                wrapperContainer.appendChild(newWrapper);
+            }
+            showClassSchedule(newIndex);
+        }
+
+        function removeClass(btn) {
+            if (confirm('Sınıfı silmek istediğinize emin misiniz?')) {
+                btn.parentElement.remove();
+            }
+        }
+
+        // ===== Slides Management =====
+        async function loadSlides() {
+            try {
+                const res = await fetch('/api/get_slides_with_info');
+                const slides = await res.json();
+                const grid = document.getElementById('slides-grid');
+                grid.innerHTML = '';
+                if (slides.length === 0) { grid.innerHTML = '<p>Hiç slayt bulunamadı.</p>'; return; }
+                slides.forEach(slide => {
+                    const div = document.createElement('div');
+                    div.className = 'slide-item';
+                    let media = slide.type === 'image' ? `<img src="${slide.url}" alt="${slide.name}" loading="lazy">` : `<video src="${slide.url}" muted></video>`;
+                    div.innerHTML = `${media}<div class="info">${slide.size}</div><button type="button" onclick="deleteSlide('${slide.name}', this)">Sil</button>`;
+                    grid.appendChild(div);
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        async function deleteSlide(filename, btn) {
+            if (!confirm(`"${filename}" silinsin mi?`)) return;
+            btn.textContent = 'Siliniyor...';
+            try {
+                const res = await fetch('/api/delete_slide', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({filename: filename}) });
+                const data = await res.json();
+                if (data.status === 'success') btn.closest('.slide-item').remove();
+                else { alert('Hata: ' + data.message); btn.textContent = 'Sil'; }
+            } catch(e) { alert('Bağlantı hatası'); btn.textContent = 'Sil'; }
+        }
+
+        // ===== System =====
+        async function openSlidesFolder() {
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "Açılıyor...";
+            try {
+                const res = await fetch('/api/open_slides_folder');
+                const data = await res.json();
+                if(data.status !== 'success') alert('Hata: ' + data.message);
+            } catch(e) { alert('Bağlantı hatası'); }
+            setTimeout(() => btn.innerText = originalText, 1000);
+        }
+
+        async function toggleAutostart(cb) {
+            const statusMsg = document.getElementById('system-msg');
+            statusMsg.innerText = "Ayarlanıyor...";
+            try {
+                const res = await fetch('/api/toggle_autostart', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ enable: cb.checked }) });
+                const data = await res.json();
+                statusMsg.innerText = data.message;
+                setTimeout(() => statusMsg.innerText = "", 3000);
+            } catch(e) { statusMsg.innerText = "Hata oluştu!"; cb.checked = !cb.checked; }
+        }
+
+        // ===== Init =====
+        loadSlides();
+        (async () => {
+            try {
+                const res = await fetch('/api/get_autostart_status');
+                const data = await res.json();
+                document.getElementById('autostart_checkbox').checked = data.enabled;
+            } catch(e) { console.error(e); }
+        })();
     </script>
 </body>
 </html>
