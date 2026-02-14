@@ -293,6 +293,7 @@ def admin():
             # General Settings Save (Existing logic)
             # General Settings Save (Existing logic)
             data['school_name'] = request.form.get('school_name')
+            data['bot_access_code'] = request.form.get('bot_access_code', 'okulpanosu')
             
             # Logo Upload Handling
             if 'logo_file' in request.files:

@@ -69,7 +69,17 @@ async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     password = context.args[0]
     
-    if password == config.BOT_ACCESS_CODE:
+    # Load password from data.json if available, else use config default
+    current_password = config.BOT_ACCESS_CODE
+    try:
+        if os.path.exists(config.DATA_FILE):
+            with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                current_password = data.get('bot_access_code', config.BOT_ACCESS_CODE)
+    except Exception as e:
+        logging.error(f"Error reading data.json for password: {e}")
+
+    if password == current_password:
         save_allowed_user(user_id)
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Giriş başarılı! Artık fotoğraf ve video gönderebilirsiniz.")
     else:

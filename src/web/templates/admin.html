@@ -214,6 +214,12 @@
                         <input type="text" name="school_name" value="{{ data.school_name }}">
                     </div>
                     <div class="col">
+                        <label>Bot Giriş Şifresi</label>
+                        <input type="text" name="bot_access_code" value="{{ data.get('bot_access_code', 'okulpanosu') }}" placeholder="okulpanosu">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
                         <label>Logo URL (veya Dosya Yükle)</label>
                         <div style="display: flex; gap: 5px;">
                             <input type="text" name="logo_url" value="{{ data.logo_url }}" placeholder="https://..." style="flex: 1;">
