@@ -9,5 +9,5 @@ dist/
 build/
 Output/
 launcher.log
-*.spec
+# data/ is user data, not tracked. See data/README.md for initial structure.
 data/

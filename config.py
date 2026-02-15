@@ -47,6 +47,7 @@ SLIDESHOW_DIR = os.path.join(WEB_STATIC_DIR, 'slideshow')
 RIDDLES_DIR = os.path.join(WEB_STATIC_DIR, 'riddles')
 
 # Network Configuration
+WEB_HOST = os.getenv("WEB_HOST", "0.0.0.0")
 WEB_PORT = int(os.getenv("WEB_PORT", 7000))
 
 # Bot Configuration

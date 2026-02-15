@@ -15,7 +15,7 @@ a = Analysis(
     optimize=0,
 )
 # Append content from Tree to a.datas (Tree returns 3-tuple TOC format, which a.datas accepts)
-a.datas += Tree('src/web/static', prefix='src/web/static', excludes=['slideshow'])
+a.datas += Tree('src/web/static', prefix='src/web/static', excludes=['slideshow', 'riddles'])
 
 pyz = PYZ(a.pure)
 

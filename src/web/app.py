@@ -7,6 +7,8 @@ import locale
 import sys
 import pandas as pd
 import subprocess
+import platform
+import secrets
 from logging.handlers import RotatingFileHandler
 import traceback
 
@@ -21,6 +23,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 import config
 import logging
+from src.shared_data import load_data, save_data, DEFAULT_DATA
 
 # Set locale for Turkish day names
 try:
@@ -35,11 +38,29 @@ app = Flask(__name__,
             static_folder=config.WEB_STATIC_DIR, 
             template_folder=config.WEB_TEMPLATE_DIR)
 
-# Secret key for session management
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'akilli-pano-secret-key-2026')
+# Secret key for session management - use env var or generate a random one
+app.secret_key = os.getenv('FLASK_SECRET_KEY') or secrets.token_hex(24)
 
 # Admin password (from data.json or config)
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin')
+
+# --- CSRF Protection ---
+def generate_csrf_token():
+    """Generate a CSRF token and store it in the session."""
+    if '_csrf_token' not in session:
+        session['_csrf_token'] = secrets.token_hex(32)
+    return session['_csrf_token']
+
+def validate_csrf_token():
+    """Validate the CSRF token from form data against session."""
+    token = session.get('_csrf_token')
+    form_token = request.form.get('csrf_token')
+    if not token or token != form_token:
+        return False
+    return True
+
+# Make csrf_token available in all templates
+app.jinja_env.globals['csrf_token'] = generate_csrf_token
 
 # Configure logging with rotation (max 5MB, keep 3 backups)
 handler = RotatingFileHandler("launcher.log", maxBytes=5*1024*1024, backupCount=3)
@@ -48,70 +69,8 @@ app.logger.addHandler(handler)
 app.logger.setLevel(logging.INFO)
 logging.getLogger('werkzeug').addHandler(handler)
 
-DEFAULT_DATA = {
-    "duty_roster": [],
-    "class_schedules": [],
-    "birthdays": [],
-    "messages": ["Akıllı Okul Panosu Sistemine Hoşgeldiniz"],
-    "quotes": ["Kitap okumayı unutmayın."],
-    "school_name": "OKUL ADI",
-    "logo_url": "",
-    "slideshow": {
-        "duration": 5000,
-        "transition": "fade",
-        "order": "newest",
-        "fit_mode": "contain"
-    },
-    "performance_mode": "high",
-    "countdown": {
-        "label": "Geri Sayım",
-        "target_date": ""
-    },
-    "layout": [
-        {"id": "card-status", "title": "Durum", "visible": True, "type": "status"},
-        {"id": "card-duty", "title": "Nöbetçi Öğretmenler", "visible": True, "type": "duty"},
-        {"id": "card-quote", "title": "Günün Sözü", "visible": True, "type": "quote"},
-        {"id": "card-countdown", "title": "Geri Sayım", "visible": True, "type": "countdown"},
-        {"id": "card-birthdays", "title": "Doğum Günleri", "visible": True, "type": "birthdays"},
-        {"id": "card-classes", "title": "Sınıf Durumları", "visible": True, "type": "classes"},
-        {"id": "card-riddle", "title": "Bilmece/Soru", "visible": True, "type": "riddle"}
-    ],
-    "schedule": [],
-    "marquee": {
-        "font_size": "1.2",
-        "duration": "30",
-        "color": "#2c3e50",
-        "font_family": "inherit"
-    }
-}
-
-def load_data():
-    data = copy.deepcopy(DEFAULT_DATA)
-    if os.path.exists(config.DATA_FILE):
-        try:
-            with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
-                loaded = json.load(f)
-                # Simple merge for top-level keys
-                for k, v in loaded.items():
-                    if isinstance(v, dict) and k in data and isinstance(data[k], dict):
-                        data[k].update(v)
-                    else:
-                        data[k] = v
-        except Exception as e:
-            app.logger.error(f"Error loading data.json: {e}")
-    
-    # Migration: Ensure new cards exist in layout
-    existing_ids = [item.get('id') for item in data.get('layout', [])]
-    if 'card-riddle' not in existing_ids:
-        data['layout'].append({"id": "card-riddle", "title": "Bilmece/Soru", "visible": True, "type": "riddle"})
-    
-    return data
-
-def save_data(data):
-    # Ensure directory exists before saving (double check)
-    os.makedirs(os.path.dirname(config.DATA_FILE), exist_ok=True)
-    with open(config.DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+# load_data and save_data are now imported from src.shared_data
+# DEFAULT_DATA is also imported from there for consistency
 
 @app.route('/')
 def index():
@@ -153,33 +112,30 @@ def handle_save_settings(data):
     new_bot_token = request.form.get('bot_token', '').strip()
     new_admin_ids = request.form.get('admin_ids', '').strip()
     new_access_code = request.form.get('bot_access_code', '').strip()
-    # Checkbox not present means False usually, but we need to check if form was submitted
-    # If checkbox is unchecked, it won't be in request.form
     new_ssl_verify = 'True' if request.form.get('bot_ssl_verify') else 'False'
     
     env_updates = {}
+    requires_restart = False
     if new_bot_token:
         env_updates['BOT_TOKEN'] = new_bot_token
+        requires_restart = True
     if new_admin_ids:
-        # Validate admin_ids format roughly (numbers and commas)
         env_updates['ADMIN_IDS'] = new_admin_ids
     if new_access_code:
         env_updates['BOT_ACCESS_CODE'] = new_access_code
     
-    # Always update SSL verify setting since it's a checkbox
     env_updates['BOT_SSL_VERIFY'] = new_ssl_verify
     
     if env_updates:
         config.update_env_file(env_updates)
-        # Update runtime config variables so they are reflected in UI immediately (if needed)
-        # Note: This won't update the running bot process until restart, but updates the UI view.
         if 'BOT_TOKEN' in env_updates: config.BOT_TOKEN = env_updates['BOT_TOKEN']
         if 'BOT_ACCESS_CODE' in env_updates: config.BOT_ACCESS_CODE = env_updates['BOT_ACCESS_CODE']
         if 'BOT_SSL_VERIFY' in env_updates: config.BOT_SSL_VERIFY = (new_ssl_verify == 'True')
         if 'ADMIN_IDS' in env_updates:
                 try:
                     config.ADMIN_IDS = [int(x.strip()) for x in env_updates['ADMIN_IDS'].split(',') if x.strip()]
-                except: pass
+                except ValueError:
+                    pass
     # --- ENV Update End ---
 
     # Update data.json legacy access code if used there, though we are moving to .env
@@ -222,10 +178,10 @@ def handle_save_settings(data):
     }
     
     raw_msgs = request.form.get('messages', '')
-    data['messages'] = [m.strip() for m in raw_msgs.split('\\n') if m.strip()]
+    data['messages'] = [m.strip() for m in raw_msgs.split('\n') if m.strip()]
     
     raw_quotes = request.form.get('quotes', '')
-    data['quotes'] = [q.strip() for q in raw_quotes.split('\\n') if q.strip()]
+    data['quotes'] = [q.strip() for q in raw_quotes.split('\n') if q.strip()]
     
     names = request.form.getlist('schedule_name[]')
     starts = request.form.getlist('schedule_start[]')
@@ -272,8 +228,18 @@ def handle_save_settings(data):
     }
 
     # Class Schedules Processing (Shortened for brevity, assume same logic as before or re-include)
+    # Dynamic Class Schedules Processing
     processed_schedules = []
-    for i in range(50):
+    # Find all keys starting with class_name_
+    class_indices = []
+    for key in request.form.keys():
+        if key.startswith('class_name_'):
+            # Extract the ID part (which might be an int or a timestamp string)
+            # key is like class_name_0 or class_name_174000000
+            idx = key.replace('class_name_', '')
+            class_indices.append(idx)
+            
+    for i in class_indices:
         name_key = f'class_name_{i}'
         if name_key in request.form:
             c_name = request.form[name_key]
@@ -346,6 +312,20 @@ def handle_save_settings(data):
     # Performance Mode
     data['performance_mode'] = request.form.get('performance_mode', 'high')
 
+    # --- Riddle Settings ---
+    exist_rd = data.get('riddle', {})
+    rd_dur_input = request.form.get('riddle_duration')
+    if rd_dur_input:
+        rd_duration = int(rd_dur_input) * 1000
+    else:
+        rd_duration = exist_rd.get('duration', 10000)
+
+    data['riddle'] = {
+        'duration': rd_duration,
+        'transition': request.form.get('riddle_transition', exist_rd.get('transition', 'fade')),
+        'fit_mode': request.form.get('riddle_fit_mode', exist_rd.get('fit_mode', 'contain'))
+    }
+
     # Auto-rotate setting
     if 'duty_rotation' not in data: data['duty_rotation'] = {}
     data['duty_rotation']['auto_rotate'] = request.form.get('auto_rotate') == 'on'
@@ -353,6 +333,8 @@ def handle_save_settings(data):
         data['duty_rotation']['last_week_number'] = datetime.now().isocalendar()[1]
 
     save_data(data)
+    if requires_restart:
+        return "Ayarlar kaydedildi! ⚠️ Bot Token değiştirildi — değişikliklerin geçerli olması için programı yeniden başlatın."
     return "Ayarlar başarıyla kaydedildi!"
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -385,6 +367,15 @@ def admin():
     message = None
 
     if request.method == 'POST':
+        # CSRF validation for all POST requests
+        if not validate_csrf_token():
+            message = "⚠️ Güvenlik hatası: Geçersiz oturum. Sayfayı yenileyip tekrar deneyin."
+            env_data = {
+                'bot_token': config.BOT_TOKEN,
+                'admin_ids': ", ".join(map(str, config.ADMIN_IDS)),
+                'bot_access_code': config.BOT_ACCESS_CODE
+            }
+            return render_template('admin.html', data=data, message=message, env_data=env_data)
         action = request.form.get('action')
         
         if action == 'rotate_now':
@@ -628,13 +619,15 @@ def get_status():
                     if lesson_name:
                         next_class_status_list.append(f"{cls['name']}: {lesson_name}")
 
-    # Birthdays
+    # Birthdays — normalize to DD.MM for comparison regardless of stored format
     todays_birthdays = []
     today_str = now.strftime("%d.%m")
     if 'birthdays' in data:
         for b in data['birthdays']:
             b_date = b.get('date', '')
-            if b_date.startswith(today_str):
+            # Extract only DD.MM part (handles DD.MM, DD.MM.YYYY etc.)
+            b_day_month = '.'.join(b_date.split('.')[:2]) if '.' in b_date else b_date
+            if b_day_month == today_str:
                 todays_birthdays.append(b['name'])
 
     return jsonify({
@@ -648,11 +641,12 @@ def get_status():
         "date": now.strftime("%d.%m.%Y"),
         "time": current_time_str,
         "day": current_day_tr,
-        "day": current_day_tr,
         "messages": data.get('messages', []),
         "quotes": data.get('quotes', []),
         "countdown": data.get('countdown', {}),
-        "slideshow": data.get('slideshow', {}) 
+        "slideshow": data.get('slideshow', {}),
+        "marquee": data.get('marquee', {}),
+        "riddle": data.get('riddle', {})
     })
 
 @app.route('/api/open_slides_folder')
@@ -660,7 +654,14 @@ def open_slides_folder():
     try:
         if not os.path.exists(config.SLIDESHOW_DIR):
             os.makedirs(config.SLIDESHOW_DIR)
-        os.startfile(config.SLIDESHOW_DIR)
+        # Platform-independent folder opening
+        current_platform = platform.system()
+        if current_platform == 'Windows':
+            os.startfile(config.SLIDESHOW_DIR)
+        elif current_platform == 'Darwin':  # macOS
+            subprocess.Popen(['open', config.SLIDESHOW_DIR])
+        else:  # Linux
+            subprocess.Popen(['xdg-open', config.SLIDESHOW_DIR])
         return jsonify({'status': 'success', 'message': 'Klasör açıldı'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
@@ -810,5 +811,61 @@ def get_riddles():
                 riddles.append(url_for('static', filename=f'riddles/{f}'))
     return jsonify(riddles)
 
+@app.route('/api/riddles_with_info')
+def get_riddles_with_info():
+    """Returns list of riddle files with metadata for admin panel."""
+    riddles = []
+    if os.path.exists(config.RIDDLES_DIR):
+        valid_exts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.webm']
+        for f in sorted(os.listdir(config.RIDDLES_DIR)):
+            ext = os.path.splitext(f)[1].lower()
+            if ext in valid_exts:
+                fp = os.path.join(config.RIDDLES_DIR, f)
+                stat = os.stat(fp)
+                size_kb = stat.st_size / 1024
+                size_str = f"{size_kb:.0f} KB" if size_kb < 1024 else f"{size_kb/1024:.1f} MB"
+                dt = datetime.fromtimestamp(stat.st_mtime)
+                file_type = 'video' if ext in ['.mp4', '.webm'] else 'image'
+                riddles.append({
+                    'name': f,
+                    'type': file_type,
+                    'size': size_str,
+                    'timestamp': stat.st_mtime,
+                    'date_str': dt.strftime("%d.%m.%Y %H:%M"),
+                    'url': url_for('static', filename=f'riddles/{f}')
+                })
+    return jsonify(riddles)
+
+@app.route('/api/delete_riddle', methods=['POST'])
+def delete_riddle():
+    """Delete a riddle file."""
+    filename = request.json.get('filename', '')
+    if not filename or '..' in filename or '/' in filename or '\\' in filename:
+        return jsonify({'status': 'error', 'message': 'Geçersiz dosya adı'})
+    filepath = os.path.join(config.RIDDLES_DIR, filename)
+    if os.path.exists(filepath):
+        try:
+            os.remove(filepath)
+            return jsonify({'status': 'success', 'message': 'Bilmece silindi'})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)})
+    return jsonify({'status': 'error', 'message': 'Dosya bulunamadı'})
+
+@app.route('/api/open_riddles_folder')
+def open_riddles_folder():
+    try:
+        if not os.path.exists(config.RIDDLES_DIR):
+            os.makedirs(config.RIDDLES_DIR)
+        current_platform = platform.system()
+        if current_platform == 'Windows':
+            os.startfile(config.RIDDLES_DIR)
+        elif current_platform == 'Darwin':
+            subprocess.Popen(['open', config.RIDDLES_DIR])
+        else:
+            subprocess.Popen(['xdg-open', config.RIDDLES_DIR])
+        return jsonify({'status': 'success', 'message': 'Klasör açıldı'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=config.WEB_PORT, debug=True)
+    app.run(host=config.WEB_HOST, port=config.WEB_PORT, debug=True)

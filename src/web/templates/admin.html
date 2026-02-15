@@ -176,6 +176,7 @@
     </div>
 
     <form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="admin-layout">
         <!-- Sidebar Navigation -->
         <nav class="sidebar-nav">
@@ -189,6 +190,7 @@
             <div class="nav-item" onclick="switchTab('tab-marquee')"><span class="nav-icon">📜</span> Kayan Yazı</div>
             <div class="nav-item" onclick="switchTab('tab-quotes')"><span class="nav-icon">📢</span> Günün Sözü</div>
             <div class="nav-item" onclick="switchTab('tab-countdown')"><span class="nav-icon">⏳</span> Geri Sayım</div>
+            <div class="nav-item" onclick="switchTab('tab-riddle')"><span class="nav-icon">❓</span> Bilmece/Soru</div>
             <!-- Slide Management tab merged into Slayt Yönetimi -->
             <div class="nav-item" onclick="switchTab('tab-system')"><span class="nav-icon">🖥️</span> Sistem</div>
         </nav>
@@ -415,10 +417,10 @@
                             <h3 style="margin-bottom: 8px;">Sınıflar</h3>
                             <div id="class-list" style="display: flex; flex-direction: column; gap: 5px;">
                                 {% for item in data.class_schedules %}
-                                <div class="class-item" onclick="showClassSchedule('{{ loop.index0 }}')" style="padding: 8px; background: #f0f0f0; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
+                                <div class="class-item" data-target="schedule-{{ loop.index0 }}" onclick="showClassSchedule('{{ loop.index0 }}')" style="padding: 8px; background: #f0f0f0; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                                     <span>{{ item.name }}</span>
                                     <input type="hidden" name="class_names[]" value="{{ item.name }}">
-                                    <button type="button" onclick="removeClass(this)" style="background: #e74c3c; padding: 2px 6px; font-size: 0.75rem;">X</button>
+                                    <button type="button" onclick="removeClass(this, '{{ loop.index0 }}')" style="background: #e74c3c; padding: 2px 6px; font-size: 0.75rem;">X</button>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -580,6 +582,55 @@
                 </div>
             </div>
 
+            <!-- ==================== TAB: Bilmece/Soru ==================== -->
+            <div class="tab-panel" id="tab-riddle">
+                <div class="card">
+                    <h2>❓ Bilmece/Soru Ayarları</h2>
+                    <p style="color: #666; margin-bottom: 15px;">Bilmece/soru kartının gösterim ayarlarını buradan yapılandırabilirsiniz.</p>
+                    <div class="row">
+                        <div class="col">
+                            <label>Gösterim Süresi (Saniye)</label>
+                            <input type="number" name="riddle_duration" value="{{ (data.riddle.duration / 1000) | int if data.riddle else 10 }}" min="3" max="120">
+                            <small style="color: #666;">Her bilmecenin ekranda kalma süresi.</small>
+                        </div>
+                        <div class="col">
+                            <label>Geçiş Efekti</label>
+                            <select name="riddle_transition">
+                                <option value="fade" {% if data.riddle and data.riddle.transition == 'fade' %}selected{% endif %}>Soluklaşarak (Fade)</option>
+                                <option value="slide" {% if data.riddle and data.riddle.transition == 'slide' %}selected{% endif %}>Kayarak (Sola)</option>
+                                <option value="zoom" {% if data.riddle and data.riddle.transition == 'zoom' %}selected{% endif %}>Büyüyerek (Zoom)</option>
+                                <option value="flip" {% if data.riddle and data.riddle.transition == 'flip' %}selected{% endif %}>Dönerek (Flip)</option>
+                                <option value="blur" {% if data.riddle and data.riddle.transition == 'blur' %}selected{% endif %}>Bulanıklaşarak (Blur)</option>
+                                <option value="none" {% if data.riddle and data.riddle.transition == 'none' %}selected{% endif %}>Yok</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label>Görüntü Modu</label>
+                            <select name="riddle_fit_mode">
+                                <option value="contain" {% if data.riddle and data.riddle.fit_mode == 'contain' %}selected{% endif %}>Sığdır (Tamamı görünsün)</option>
+                                <option value="cover" {% if data.riddle and data.riddle.fit_mode == 'cover' %}selected{% endif %}>Doldur (Boşluk kalmasın)</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <div style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-top: 20px;">
+                                <p style="margin: 0; font-size: 0.9rem; color: #666;">💡 <strong>Nasıl Yüklenir?</strong><br>Bilmece/soru görsellerini Telegram botu üzerinden "❓ Bilmece/Soru Yükle" butonu ile gönderebilirsiniz.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Riddle Files Card -->
+                <div class="card" style="margin-top: 20px; border-top: 4px solid #9b59b6;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <h2 style="margin: 0;">🖼️ Yüklü Bilmeceler</h2>
+                        <button type="button" onclick="openRiddlesFolder()" style="background: #9b59b6; padding: 6px 12px; font-size: 0.9rem;">📂 Klasörü Aç</button>
+                    </div>
+                    <div id="riddles-grid" class="slide-grid" style="margin-top: 10px;"><p>Yükleniyor...</p></div>
+                </div>
+            </div>
+
             <!-- ==================== TAB: Sistem ==================== -->
             <div class="tab-panel" id="tab-system">
                 <div class="card" style="border: 2px solid #3498db;">
@@ -686,42 +737,84 @@
 
         function addClass() {
             const classList = document.getElementById('class-list');
-            const wrapperContainer = document.querySelector('.schedule-table-wrapper') ? document.querySelector('.schedule-table-wrapper').parentElement : null;
-            const newIndex = document.querySelectorAll('.schedule-table-wrapper').length;
+            const wrapperContainer = document.querySelector('.schedule-table-wrapper') ? document.querySelector('.schedule-table-wrapper').parentElement : document.querySelector('#tab-classes .card > div > div:last-child');
+            
+            // Use timestamp for unique ID to avoid collision
+            const newIndex = Date.now();
             const className = prompt("Yeni Sınıf Adı:", "11-A");
             if (!className) return;
 
+            // Create Sidebar Item
             const div = document.createElement('div');
             div.className = 'class-item';
+            div.dataset.target = 'schedule-' + newIndex;
             div.style = 'padding: 8px; background: #f0f0f0; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;';
             div.onclick = function() { showClassSchedule(newIndex); };
-            div.innerHTML = `<span>${className}</span><input type="hidden" name="class_names[]" value="${className}"><button type="button" onclick="removeClass(this)" style="background: #e74c3c; padding: 2px 6px; font-size: 0.75rem;">X</button>`;
+            div.innerHTML = `<span>${className}</span><input type="hidden" name="class_names[]" value="${className}"><button type="button" onclick="removeClass(this, '${newIndex}')" style="background: #e74c3c; padding: 2px 6px; font-size: 0.75rem;">X</button>`;
             classList.appendChild(div);
 
-            if (wrapperContainer) {
-                const firstWrapper = document.querySelector('.schedule-table-wrapper');
-                const newWrapper = firstWrapper.cloneNode(true);
+            // Create Content Wrapper
+            // Clone the first one if exists to keep structure, or create new from template string
+            const firstWrapper = document.querySelector('.schedule-table-wrapper');
+            let newWrapper;
+            
+            if (firstWrapper) {
+                newWrapper = firstWrapper.cloneNode(true);
                 newWrapper.id = 'schedule-' + newIndex;
                 newWrapper.style.display = 'none';
                 newWrapper.querySelector('h3').textContent = className + ' - Haftalık Program';
+                
                 const nameInput = newWrapper.querySelector('input[name^="class_name_"]');
+                // Use the unique index for naming
                 nameInput.name = 'class_name_' + newIndex;
                 nameInput.value = className;
+                
+                // Clear inputs and fix names
                 newWrapper.querySelectorAll('input[type="text"]').forEach(input => {
                     if (input.name.startsWith('schedule_')) {
                         const parts = input.name.split('_');
-                        input.name = `schedule_${newIndex}_${parts[2]}`;
+                        // schedule_{index}_{day}[]
+                        // We need to preserve the day part (parts[2])
+                        const day = parts.length > 2 ? parts[2] : 'Monday';
+                        input.name = `schedule_${newIndex}_${day}[]`;
                         input.value = '';
                     }
                 });
-                wrapperContainer.appendChild(newWrapper);
+            } else {
+                // Fallback if no classes exist (shouldn't happen often if Default Data is there, but for robustness)
+                // We would need to recreate the table structure. 
+                // For now, let's assume at least one exists or we reload. 
+                // Ideally we should have a hidden template. 
+                alert("Lütfen sayfayı yenileyip tekrar deneyin (Şablon bulunamadı).");
+                return;
             }
+            
+            wrapperContainer.appendChild(newWrapper);
             showClassSchedule(newIndex);
         }
 
-        function removeClass(btn) {
+        function removeClass(btn, index) {
+            event.stopPropagation(); // Prevent ensuring click trigger
             if (confirm('Sınıfı silmek istediğinize emin misiniz?')) {
-                btn.parentElement.remove();
+                // Remove Sidebar Item
+                const item = btn.closest('.class-item');
+                item.remove();
+                
+                // Remove Content Div
+                // index might be passed or we can find it
+                let targetId = 'schedule-' + index;
+                // If index not passed (legacy/initial items), try to find from click or data
+                if (!index) {
+                     // For initial items, we might need a different way if we didn't update their onclicks.
+                     // But we will update the HTML generation to include onclick with index.
+                }
+                
+                const content = document.getElementById(targetId);
+                if (content) content.remove();
+                
+                // Switch to first available if any
+                const firstItem = document.querySelector('.class-item');
+                if (firstItem) firstItem.click();
             }
         }
 
@@ -824,8 +917,53 @@
             } catch(e) { statusMsg.innerText = "Hata oluştu!"; cb.checked = !cb.checked; }
         }
 
+        // ===== Riddle Management =====
+        async function loadRiddles() {
+            const grid = document.getElementById('riddles-grid');
+            if (!grid) return;
+            try {
+                const res = await fetch('/api/riddles_with_info');
+                const riddles = await res.json();
+                if (riddles.length === 0) {
+                    grid.innerHTML = '<p style="color: #666;">Henüz bilmece yüklenmemiş. Bot üzerinden gönderim yapınız.</p>';
+                    return;
+                }
+                grid.innerHTML = riddles.map(r => `
+                    <div class="slide-item">
+                        ${r.type === 'image' ? `<img src="${r.url}" alt="${r.name}">` : `<video src="${r.url}" muted></video>`}
+                        <div class="info">${r.name}<br>${r.size} &bull; ${r.date_str}</div>
+                        <button type="button" onclick="deleteRiddle('${r.name}', this)">Sil</button>
+                    </div>
+                `).join('');
+            } catch(e) { grid.innerHTML = '<p>Yükleme hatası.</p>'; }
+        }
+
+        async function deleteRiddle(filename, btn) {
+            if (!confirm(`"${filename}" silinsin mi?`)) return;
+            btn.textContent = 'Siliniyor...';
+            try {
+                const res = await fetch('/api/delete_riddle', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({filename: filename}) });
+                const data = await res.json();
+                if (data.status === 'success') { loadRiddles(); }
+                else { alert('Hata: ' + data.message); btn.textContent = 'Sil'; }
+            } catch(e) { alert('Bağlantı hatası'); btn.textContent = 'Sil'; }
+        }
+
+        async function openRiddlesFolder() {
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "Açılıyor...";
+            try {
+                const res = await fetch('/api/open_riddles_folder');
+                const data = await res.json();
+                if(data.status !== 'success') alert('Hata: ' + data.message);
+            } catch(e) { alert('Bağlantı hatası'); }
+            setTimeout(() => btn.innerText = originalText, 1000);
+        }
+
         // ===== Init =====
         loadSlides();
+        loadRiddles();
         (async () => {
             try {
                 const res = await fetch('/api/get_autostart_status');

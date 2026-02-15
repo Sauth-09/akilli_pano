@@ -5,18 +5,48 @@
             "name": "9-A",
             "program": {
                 "Monday": [
-                    "Matematik"
+                    "Matematik",
+                    ""
                 ],
                 "Tuesday": [
-                    "Beden"
+                    "Beden",
+                    ""
                 ],
                 "Wednesday": [
+                    "",
                     ""
                 ],
                 "Thursday": [
+                    "",
                     ""
                 ],
                 "Friday": [
+                    "",
+                    ""
+                ]
+            }
+        },
+        {
+            "name": "11-A",
+            "program": {
+                "Monday": [
+                    "",
+                    ""
+                ],
+                "Tuesday": [
+                    "",
+                    ""
+                ],
+                "Wednesday": [
+                    "",
+                    ""
+                ],
+                "Thursday": [
+                    "",
+                    ""
+                ],
+                "Friday": [
+                    "",
                     ""
                 ]
             }
@@ -38,7 +68,7 @@
     ],
     "messages": [],
     "quotes": [],
-    "school_name": "Test Okul",
+    "school_name": "Test Okull",
     "logo_url": "/static/img/school_logo.ico",
     "slideshow": {
         "duration": 10000,
@@ -107,6 +137,11 @@
         "duration": "30",
         "color": "#2c3e50",
         "font_family": "'Roboto', sans-serif"
+    },
+    "riddle": {
+        "duration": 10000,
+        "transition": "fade",
+        "fit_mode": "contain"
     },
     "bot_access_code": "okulpanosu",
     "duty_rotation": {

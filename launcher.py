@@ -30,7 +30,7 @@ def run_web_server():
     try:
         from src.web.app import app
         # Disable reloader to avoid main thread issues in frozen app
-        app.run(host='0.0.0.0', port=config.WEB_PORT, debug=False, use_reloader=False)
+        app.run(host=config.WEB_HOST, port=config.WEB_PORT, debug=False, use_reloader=False)
     except Exception as e:
         logger.error(f"Web Server Error: {e}")
 
@@ -80,7 +80,7 @@ def launch_kiosk():
             try:
                 subprocess.Popen([
                     chrome_exe,
-                    "--start-fullscreen",
+                    "--kiosk",
                     "--incognito",
                     "--disable-infobars",
                     "--no-first-run",
@@ -94,9 +94,12 @@ def launch_kiosk():
             webbrowser.open(url)
     else:
         logger.error("Web Server failed to start within timeout.")
-        # Optional: Show a message box if possible, or just log
-        import ctypes
-        ctypes.windll.user32.MessageBoxW(0, "Sunucu başlatılamadı! Lütfen log dosyasını kontrol edin.", "Hata", 16)
+        # Show error dialog (Windows only)
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, "Sunucu başlatılamadı! Lütfen log dosyasını kontrol edin.", "Hata", 16)
+        except Exception:
+            pass  # Non-Windows platform, just log
 
 def open_settings():
     webbrowser.open(f"http://localhost:{config.WEB_PORT}/admin")
@@ -132,7 +135,7 @@ if __name__ == "__main__":
     # System Tray Icon Setup
     try:
         image = Image.open("logo.ico")
-    except:
+    except Exception:
         # Fallback if logo not found (create simple image)
         from PIL import ImageDraw
         image = Image.new('RGB', (64, 64), color = (73, 109, 137))

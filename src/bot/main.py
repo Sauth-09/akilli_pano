@@ -3,12 +3,14 @@ import logging
 import uuid
 import sys
 import json
+from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
 # Import config from parent directory
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import config
+from src.shared_data import load_data, save_data
 
 # Logging Configuration
 logging.basicConfig(
@@ -17,28 +19,8 @@ logging.basicConfig(
 )
 
 # --- Data Helpers ---
-
-def load_data():
-    """Load data.json"""
-    if not os.path.exists(config.DATA_FILE):
-        return {}
-    try:
-        with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        logging.error(f"Error loading data.json: {e}")
-        return {}
-
-def save_data(data):
-    """Save data.json"""
-    try:
-        os.makedirs(os.path.dirname(config.DATA_FILE), exist_ok=True)
-        with open(config.DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        return True
-    except Exception as e:
-        logging.error(f"Error saving data.json: {e}")
-        return False
+# load_data and save_data are now imported from src.shared_data
+# This ensures thread-safe access and consistent formatting
 
 def load_allowed_users():
     if not os.path.exists(config.ALLOWED_USERS_FILE):
@@ -208,8 +190,32 @@ async def mesajlar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode='Markdown')
 
 async def mesaj_sil_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Keep functionality for manual slash command users
-    pass 
+    """Delete a marquee message by number."""
+    user_id = update.effective_user.id
+    if not is_authorized(user_id): return
+    data = load_data()
+    messages = data.get('messages', [])
+
+    if not messages:
+        await update.message.reply_text("Silinecek mesaj yok.")
+        return
+
+    if not context.args:
+        msg_list = "\n".join([f"{i+1}. {m}" for i, m in enumerate(messages)])
+        await update.message.reply_text(f"Silmek istediğiniz mesajın numarasını yazın:\n\n{msg_list}\n\nÖrnek: /mesajsil 1")
+        return
+
+    try:
+        idx = int(context.args[0]) - 1
+        if 0 <= idx < len(messages):
+            removed = messages.pop(idx)
+            data['messages'] = messages
+            save_data(data)
+            await update.message.reply_text(f"✅ Mesaj silindi: \"{removed}\"")
+        else:
+            await update.message.reply_text(f"❌ Geçersiz numara. 1-{len(messages)} arası girin.")
+    except ValueError:
+        await update.message.reply_text("❌ Lütfen geçerli bir numara girin. Örnek: /mesajsil 1")
 
 async def soz_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -241,7 +247,32 @@ async def sozler_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode='Markdown')
 
 async def sozsil_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+    """Delete a quote by number."""
+    user_id = update.effective_user.id
+    if not is_authorized(user_id): return
+    data = load_data()
+    quotes = data.get('quotes', [])
+
+    if not quotes:
+        await update.message.reply_text("Silinecek söz yok.")
+        return
+
+    if not context.args:
+        quote_list = "\n".join([f"{i+1}. {q}" for i, q in enumerate(quotes)])
+        await update.message.reply_text(f"Silmek istediğiniz sözün numarasını yazın:\n\n{quote_list}\n\nÖrnek: /sozsil 1")
+        return
+
+    try:
+        idx = int(context.args[0]) - 1
+        if 0 <= idx < len(quotes):
+            removed = quotes.pop(idx)
+            data['quotes'] = quotes
+            save_data(data)
+            await update.message.reply_text(f"✅ Söz silindi: \"{removed}\"")
+        else:
+            await update.message.reply_text(f"❌ Geçersiz numara. 1-{len(quotes)} arası girin.")
+    except ValueError:
+        await update.message.reply_text("❌ Lütfen geçerli bir numara girin. Örnek: /sozsil 1")
 
 async def durum_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -269,20 +300,20 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             os.makedirs(config.RIDDLES_DIR, exist_ok=True)
     
     file = None
-    file_name = f"{uuid.uuid4()}"
+    ext = ""
     
     if update.message.photo:
         file = await update.message.photo[-1].get_file()
-        file_name += ".jpg"
+        ext = ".jpg"
     elif update.message.video:
         file = await update.message.video.get_file()
-        file_name += ".mp4"
+        ext = ".mp4"
     elif update.message.document:
         mime = update.message.document.mime_type
         if mime and mime.startswith('image/'):
-            file_name += ".jpg"
+            ext = ".jpg"
         elif mime and mime.startswith('video/'):
-            file_name += ".mp4"
+            ext = ".mp4"
         else:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Sadece fotoğraf/video.")
             return
@@ -290,7 +321,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         return
 
-    file_path = os.path.join(target_dir, file_name)
+    filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}{ext}"
+    file_path = os.path.join(target_dir, filename)
     await file.download_to_drive(file_path)
     await context.bot.send_message(chat_id=update.effective_chat.id, text=success_msg)
 
@@ -424,6 +456,7 @@ def main():
 
     # SSL Verification Handling
     if not config.BOT_SSL_VERIFY:
+        logging.warning("SSL verification is DISABLED. This is insecure — only use on trusted networks (e.g., school/MEB proxy).")
         try:
             from telegram.request import HTTPXRequest
             class InsecureHTTPXRequest(HTTPXRequest):
@@ -434,7 +467,7 @@ def main():
                     return super()._create_client(**kwargs)
             builder.request(InsecureHTTPXRequest())
         except ImportError:
-            pass
+            logging.warning("HTTPXRequest import failed, SSL bypass could not be applied.")
 
     application = builder.build()
     

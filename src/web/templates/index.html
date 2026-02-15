@@ -23,7 +23,7 @@
         <!-- Header -->
         <header class="header">
             <div class="logo-container">
-                <img src="{{ logo_url }}" alt="Okul Logosu" class="logo">
+                <img src="{{ logo_url or url_for('static', filename='logo.ico') }}" alt="Okul Logosu" class="logo">
             </div>
             <div class="school-title-container">
                 <h1>{{ school_name }}</h1>

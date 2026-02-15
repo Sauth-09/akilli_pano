@@ -19,6 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
         transition: 'fade',
         fit_mode: 'contain'
     };
+    let riddleConfig = {
+        duration: 10000,
+        transition: 'fade',
+        fit_mode: 'contain'
+    };
 
     // --- CLOCK & DATE ---
     function updateClock() {
@@ -211,6 +216,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update Slideshow Config
             if (data.slideshow) {
                 slideshowConfig = data.slideshow;
+            }
+            if (data.riddle) {
+                riddleConfig = data.riddle;
             }
 
             // Update Marquee Content
@@ -477,6 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function playNextRiddle() {
         if (riddleQueue.length === 0) {
             showNoRiddles();
+            currentRiddleIndex = -1;
             return;
         }
 
@@ -487,34 +496,93 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = riddleQueue[currentRiddleIndex];
         const ext = url.split('.').pop().toLowerCase();
 
-        // Standard fade effect for riddles
-        if (riddleImg) {
-            riddleImg.style.opacity = 0;
-            riddleImg.style.transition = 'opacity 0.5s';
+        // Apply Fit Mode
+        const fitClass = riddleConfig.fit_mode === 'cover' ? 'fit-cover' : 'fit-contain';
+        if (riddleImg) riddleImg.className = fitClass;
+        if (riddleVideo) riddleVideo.className = fitClass;
+
+        // Transition Logic (Reuse slideshow classes if possible or add inline)
+        // Since we are reusing the CSS classes for slideshow (fade-out, slide-out-left etc.)
+        // we can apply similar logic here.
+        let effect = riddleConfig.transition || 'fade';
+
+        // Simple Reset for video
+        if (riddleVideo) {
+            riddleVideo.style.display = 'none';
+            riddleVideo.pause();
+            riddleVideo.className = fitClass; // Reset class
         }
 
-        setTimeout(() => {
-            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-                if (riddleVideo) { riddleVideo.style.display = 'none'; riddleVideo.pause(); }
-                if (riddleImg) {
+        if (riddleImg) {
+            // If currently displayed, apply exit animation
+            if (riddleImg.style.display !== 'none') {
+                // Determine exit class
+                const exitClasses = {
+                    'fade': 'fade-out',
+                    'slide': 'slide-out-left',
+                    'zoom': 'zoom-out',
+                    'flip': 'flip-out',
+                    'blur': 'blur-out',
+                    'rotate': 'rotate-out',
+                    'slide-up': 'slide-up-out',
+                    'slide-down': 'slide-down-out'
+                };
+                const exitClass = exitClasses[effect] || 'fade-out';
+                riddleImg.classList.add(exitClass);
+            }
+
+            // Wait for exit
+            setTimeout(() => {
+                // Load Next
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                    // IMAGE
                     riddleImg.onload = () => {
                         riddleImg.style.display = 'block';
-                        setTimeout(() => riddleImg.style.opacity = 1, 50);
+                        riddleImg.className = fitClass; // Reset classes
+
+                        // Entry Animation
+                        const entryClasses = {
+                            'slide': 'slide-in-right',
+                            'zoom': 'zoom-in',
+                            'flip': 'flip-in',
+                            'blur': 'blur-in',
+                            'rotate': 'rotate-in',
+                            'slide-up': 'slide-up-in',
+                            'slide-down': 'slide-down-in'
+                        };
+                        const entryClass = entryClasses[effect];
+                        if (entryClass) {
+                            riddleImg.classList.add(entryClass);
+                            setTimeout(() => riddleImg.classList.remove(entryClass), 1000);
+                        } else {
+                            // Fade in by default due to display block (if css opacity handled)
+                            // or explicit opacity:
+                            riddleImg.style.opacity = 0;
+                            setTimeout(() => { riddleImg.style.transition = 'opacity 1s'; riddleImg.style.opacity = 1; }, 50);
+                        }
+
                         clearTimeout(riddleTimer);
-                        riddleTimer = setTimeout(playNextRiddle, 10000); // 10s per riddle
+                        riddleTimer = setTimeout(playNextRiddle, riddleConfig.duration);
                     };
+                    riddleImg.onerror = () => playNextRiddle();
                     riddleImg.src = url;
-                }
-            } else if (['mp4', 'webm'].includes(ext)) {
-                if (riddleImg) riddleImg.style.display = 'none';
-                if (riddleVideo) {
-                    riddleVideo.src = url;
-                    riddleVideo.style.display = 'block';
-                    riddleVideo.play().catch(e => { playNextRiddle(); });
-                    riddleVideo.onended = () => playNextRiddle();
+
+                } else if (['mp4', 'webm'].includes(ext)) {
+                    // VIDEO
+                    if (riddleImg) riddleImg.style.display = 'none';
+                    if (riddleVideo) {
+                        riddleVideo.src = url;
+                        riddleVideo.style.display = 'block';
+                        riddleVideo.play().catch(e => { playNextRiddle(); });
+                        riddleVideo.onended = () => playNextRiddle();
+                    } else playNextRiddle();
                 } else playNextRiddle();
-            } else playNextRiddle();
-        }, 500);
+
+            }, 500); // 500ms exit wait
+        } else {
+            // Fallback if no img element
+            setTimeout(playNextRiddle, riddleConfig.duration);
+        }
     }
 
     // Init Riddle Fetch
