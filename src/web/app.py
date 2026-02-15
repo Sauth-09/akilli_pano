@@ -183,19 +183,38 @@ def handle_save_settings(data):
     raw_quotes = request.form.get('quotes', '')
     data['quotes'] = [q.strip() for q in raw_quotes.split('\n') if q.strip()]
     
-    names = request.form.getlist('schedule_name[]')
-    starts = request.form.getlist('schedule_start[]')
-    ends = request.form.getlist('schedule_end[]')
+    # Schedule Groups Processing
+    schedule_groups = []
+    group_indices = []
+    for key in request.form.keys():
+        if key.startswith('schedule_group_name_'):
+            idx = key.replace('schedule_group_name_', '')
+            group_indices.append(idx)
     
-    new_schedule = []
-    for i, name in enumerate(names):
-        if i < len(starts) and i < len(ends):
-            new_schedule.append({
-                'name': name,
-                'start': starts[i],
-                'end': ends[i]
-            })
-    data['schedule'] = new_schedule
+    for gi in group_indices:
+        group_name = request.form.get(f'schedule_group_name_{gi}', 'Varsayılan')
+        group_days = request.form.getlist(f'schedule_group_days_{gi}[]')
+        names = request.form.getlist(f'sg_name_{gi}[]')
+        starts = request.form.getlist(f'sg_start_{gi}[]')
+        ends = request.form.getlist(f'sg_end_{gi}[]')
+        
+        items = []
+        for j, name in enumerate(names):
+            if j < len(starts) and j < len(ends) and name.strip():
+                items.append({
+                    'name': name,
+                    'start': starts[j],
+                    'end': ends[j]
+                })
+        
+        schedule_groups.append({
+            'name': group_name,
+            'days': group_days,
+            'items': items
+        })
+    
+    if schedule_groups:
+        data['schedule'] = {'groups': schedule_groups}
     
     locations = request.form.getlist('location[]')
     mondays = request.form.getlist('Monday[]')
@@ -254,6 +273,16 @@ def handle_save_settings(data):
             })
     if processed_schedules:
         data['class_schedules'] = processed_schedules
+
+    # Lesson Count Setting
+    lesson_count_input = request.form.get('lesson_count')
+    if lesson_count_input:
+        try:
+            lc = int(lesson_count_input)
+            if 1 <= lc <= 15:
+                data['lesson_count'] = lc
+        except (ValueError, TypeError):
+            pass
 
     # Layout Settings
     layout_ids = request.form.getlist('layout_id[]')
@@ -533,12 +562,17 @@ def get_status():
     current_lesson_index = -1 # -1 means no lesson (break or off)
     current_time = datetime.strptime(current_time_str, "%H:%M")
     
-    schedule = data.get('schedule', [])
-    if isinstance(schedule, dict):
-         schedule_list = []
-         for k, v in schedule.items():
-            schedule_list.append({'name': k, 'start': v['start'], 'end': v['end']})
-         schedule = schedule_list
+    # Get today's schedule from schedule groups
+    schedule_data = data.get('schedule', {})
+    schedule = []
+    if isinstance(schedule_data, dict) and 'groups' in schedule_data:
+        for group in schedule_data['groups']:
+            if current_day_en in group.get('days', []):
+                schedule = group.get('items', [])
+                break
+    elif isinstance(schedule_data, list):
+        # Legacy flat list format
+        schedule = schedule_data
 
     for index, item in enumerate(schedule):
         try:

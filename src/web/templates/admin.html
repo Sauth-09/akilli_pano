@@ -391,20 +391,51 @@
             <div class="tab-panel" id="tab-schedule">
                 <div class="card">
                     <h2>📅 Ders Saatleri</h2>
-                    <div id="schedule-container" style="display: flex; flex-wrap: wrap; gap: 15px;">
-                        {% for item in data.schedule %}
-                        <div class="schedule-card" style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 200px;">
-                            <label>Ders/Etkinlik Adı</label>
-                            <input type="text" name="schedule_name[]" value="{{ item.name }}" required>
-                            <label>Başlangıç</label>
-                            <input type="time" name="schedule_start[]" value="{{ item.start }}" required>
-                            <label>Bitiş</label>
-                            <input type="time" name="schedule_end[]" value="{{ item.end }}" required>
-                            <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 10px;">Sil</button>
+                    <p style="color: #666; margin-bottom: 15px;">Günlere göre ders saatlerini ayarlayın. Farklı günler için yeni program grubu ekleyebilirsiniz.</p>
+                    <div id="schedule-groups-container">
+                        {% set schedule_groups = data.schedule.groups if data.schedule is mapping and data.schedule.groups else [{'name': 'Varsayılan', 'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], 'items': []}] %}
+                        {% for group in schedule_groups %}
+                        {% set group_idx = loop.index0 %}
+                        <div class="schedule-group" data-group-index="{{ group_idx }}" style="border: 2px solid {{ '#3498db' if loop.first else '#e67e22' }}; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #fafcff;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 1.3rem;">{{ '📌' if loop.first else '📋' }}</span>
+                                    <input type="text" name="schedule_group_name_{{ group_idx }}" value="{{ group.name }}" style="font-size: 1.1rem; font-weight: bold; border: none; background: transparent; border-bottom: 2px solid #ddd; padding: 4px 8px; width: 200px; margin: 0;">
+                                </div>
+                                {% if not loop.first %}
+                                <button type="button" onclick="removeScheduleGroup(this)" style="background: #e74c3c; padding: 6px 12px; font-size: 0.85rem;">🗑️ Grubu Sil</button>
+                                {% endif %}
+                            </div>
+                            <!-- Day Checkboxes -->
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 8px; background: #eef3f8; border-radius: 6px;">
+                                <span style="font-weight: bold; font-size: 0.85rem; color: #555; margin-right: 5px; line-height: 28px;">Günler:</span>
+                                {% set all_days = [('Monday', 'Pzt'), ('Tuesday', 'Sal'), ('Wednesday', 'Çar'), ('Thursday', 'Per'), ('Friday', 'Cum')] %}
+                                {% for day_en, day_tr in all_days %}
+                                <label style="display: flex; align-items: center; gap: 4px; padding: 4px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin: 0;">
+                                    <input type="checkbox" name="schedule_group_days_{{ group_idx }}[]" value="{{ day_en }}" {% if day_en in group.days %}checked{% endif %} style="margin: 0; width: auto;">
+                                    {{ day_tr }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                            <!-- Schedule Cards -->
+                            <div class="sg-cards" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                {% for item in group.items %}
+                                <div class="schedule-card" style="background: white; border: 1px solid #ddd; padding: 12px; border-radius: 8px; width: 180px;">
+                                    <label style="font-size: 0.8rem;">Ders/Etkinlik</label>
+                                    <input type="text" name="sg_name_{{ group_idx }}[]" value="{{ item.name }}" required style="font-size: 0.9rem;">
+                                    <label style="font-size: 0.8rem;">Başlangıç</label>
+                                    <input type="time" name="sg_start_{{ group_idx }}[]" value="{{ item.start }}" required>
+                                    <label style="font-size: 0.8rem;">Bitiş</label>
+                                    <input type="time" name="sg_end_{{ group_idx }}[]" value="{{ item.end }}" required>
+                                    <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 8px; padding: 4px; font-size: 0.8rem;">Sil</button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button type="button" onclick="addScheduleCard(this)" style="background: #27ae60; margin-top: 10px; padding: 6px 14px; font-size: 0.85rem;">+ Ders/Etkinlik Ekle</button>
                         </div>
                         {% endfor %}
                     </div>
-                    <button type="button" onclick="addScheduleCard()" style="background: #3498db; margin-top: 15px;">+ Yeni Ders/Etkinlik</button>
+                    <button type="button" onclick="addScheduleGroup()" style="background: #e67e22; margin-top: 5px; padding: 8px 16px;">+ Farklı Gün Programı</button>
                 </div>
             </div>
 
@@ -412,6 +443,15 @@
             <div class="tab-panel" id="tab-classes">
                 <div class="card">
                     <h2>📚 Sınıf Ders Programları</h2>
+                    <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px;">
+                        <label style="margin: 0; font-weight: bold; white-space: nowrap;">Günlük Ders Sayısı:</label>
+                        <select name="lesson_count" id="lesson_count_select" onchange="updateAllTables()" style="width: 80px; margin: 0; padding: 6px;">
+                            {% for n in range(6, 13) %}
+                            <option value="{{ n }}" {% if data.lesson_count == n %}selected{% endif %}>{{ n }}</option>
+                            {% endfor %}
+                        </select>
+                        <small style="color: #666; margin: 0;">Okulunuzdaki günlük ders sayısını seçin.</small>
+                    </div>
                     <div style="display: flex; gap: 20px;">
                         <div style="width: 180px; border-right: 1px solid #ddd; padding-right: 10px;">
                             <h3 style="margin-bottom: 8px;">Sınıflar</h3>
@@ -426,7 +466,7 @@
                             </div>
                             <button type="button" onclick="addClass()" style="width: 100%; margin-top: 10px; background: #3498db; font-size: 0.85rem;">+ Sınıf Ekle</button>
                         </div>
-                        <div style="flex: 1; overflow-x: auto;">
+                        <div id="schedule-wrapper-container" style="flex: 1; overflow-x: auto;">
                             {% for item in data.class_schedules %}
                             <div class="schedule-table-wrapper" id="schedule-{{ loop.index0 }}" style="display: {% if loop.first %}block{% else %}none{% endif %};">
                                 <h3>{{ item.name }} - Haftalık Program</h3>
@@ -435,7 +475,7 @@
                                     <thead>
                                         <tr>
                                             <th style="width: 100px;">Gün</th>
-                                            {% for i in range(1, 9) %}<th>{{ i }}</th>{% endfor %}
+                                            {% for i in range(1, data.lesson_count + 1) %}<th>{{ i }}</th>{% endfor %}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -445,7 +485,7 @@
                                         <tr>
                                             <td><strong>{{ tr_days[loop.index0] }}</strong></td>
                                             {% set day_lessons = item.program.get(day, []) %}
-                                            {% for i in range(8) %}
+                                            {% for i in range(data.lesson_count) %}
                                             <td><input type="text" name="schedule_{{ loop.index0 }}_{{ day }}[]" value="{{ day_lessons[i] if i < day_lessons|length else '' }}" style="width: 100%;"></td>
                                             {% endfor %}
                                         </tr>
@@ -709,22 +749,69 @@
             }
         }
 
-        // ===== Schedule Cards =====
-        function addScheduleCard() {
-            const container = document.getElementById('schedule-container');
+        // ===== Schedule Groups =====
+        function addScheduleCard(btn) {
+            const group = btn.closest('.schedule-group');
+            const gi = group.dataset.groupIndex;
+            const container = group.querySelector('.sg-cards');
             const div = document.createElement('div');
             div.className = 'schedule-card';
-            div.style = 'background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 200px;';
+            div.style = 'background: white; border: 1px solid #ddd; padding: 12px; border-radius: 8px; width: 180px;';
             div.innerHTML = `
-                <label>Ders/Etkinlik Adı</label>
-                <input type="text" name="schedule_name[]" placeholder="Örn: 9. Ders" required>
-                <label>Başlangıç</label>
-                <input type="time" name="schedule_start[]" required>
-                <label>Bitiş</label>
-                <input type="time" name="schedule_end[]" required>
-                <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 10px;">Sil</button>
+                <label style="font-size: 0.8rem;">Ders/Etkinlik</label>
+                <input type="text" name="sg_name_${gi}[]" placeholder="Örn: 1. Ders" required style="font-size: 0.9rem;">
+                <label style="font-size: 0.8rem;">Başlangıç</label>
+                <input type="time" name="sg_start_${gi}[]" required>
+                <label style="font-size: 0.8rem;">Bitiş</label>
+                <input type="time" name="sg_end_${gi}[]" required>
+                <button type="button" onclick="this.parentElement.remove()" style="background: #e74c3c; width: 100%; margin-top: 8px; padding: 4px; font-size: 0.8rem;">Sil</button>
             `;
             container.appendChild(div);
+        }
+
+        function addScheduleGroup() {
+            const container = document.getElementById('schedule-groups-container');
+            const newIndex = Date.now();
+            const groupName = prompt('Yeni program grubu adı:', 'Cuma Programı');
+            if (!groupName) return;
+
+            const days = [
+                {en: 'Monday', tr: 'Pzt'}, {en: 'Tuesday', tr: 'Sal'},
+                {en: 'Wednesday', tr: 'Çar'}, {en: 'Thursday', tr: 'Per'},
+                {en: 'Friday', tr: 'Cum'}
+            ];
+            let dayCheckboxes = days.map(d =>
+                `<label style="display: flex; align-items: center; gap: 4px; padding: 4px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin: 0;">
+                    <input type="checkbox" name="schedule_group_days_${newIndex}[]" value="${d.en}" style="margin: 0; width: auto;">
+                    ${d.tr}
+                </label>`
+            ).join('');
+
+            const div = document.createElement('div');
+            div.className = 'schedule-group';
+            div.dataset.groupIndex = newIndex;
+            div.style = 'border: 2px solid #e67e22; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #fffaf5;';
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.3rem;">📋</span>
+                        <input type="text" name="schedule_group_name_${newIndex}" value="${groupName}" style="font-size: 1.1rem; font-weight: bold; border: none; background: transparent; border-bottom: 2px solid #ddd; padding: 4px 8px; width: 200px; margin: 0;">
+                    </div>
+                    <button type="button" onclick="removeScheduleGroup(this)" style="background: #e74c3c; padding: 6px 12px; font-size: 0.85rem;">🗑️ Grubu Sil</button>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 8px; background: #eef3f8; border-radius: 6px;">
+                    <span style="font-weight: bold; font-size: 0.85rem; color: #555; margin-right: 5px; line-height: 28px;">Günler:</span>
+                    ${dayCheckboxes}
+                </div>
+                <div class="sg-cards" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
+                <button type="button" onclick="addScheduleCard(this)" style="background: #27ae60; margin-top: 10px; padding: 6px 14px; font-size: 0.85rem;">+ Ders/Etkinlik Ekle</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeScheduleGroup(btn) {
+            if (!confirm('Bu program grubunu silmek istediğinize emin misiniz?')) return;
+            btn.closest('.schedule-group').remove();
         }
 
         // ===== Class Schedule =====
@@ -735,9 +822,67 @@
             if (selected) selected.style.display = 'block';
         }
 
+        function updateAllTables() {
+            const lessonCount = parseInt(document.getElementById('lesson_count_select').value) || 8;
+            
+            document.querySelectorAll('.schedule-table-wrapper').forEach(wrapper => {
+                const table = wrapper.querySelector('table');
+                if (!table) return;
+                
+                // Update header
+                const headerRow = table.querySelector('thead tr');
+                const currentHeaders = headerRow.querySelectorAll('th');
+                const currentCount = currentHeaders.length - 1; // minus "Gün" column
+                
+                if (lessonCount > currentCount) {
+                    // Add columns
+                    for (let i = currentCount + 1; i <= lessonCount; i++) {
+                        const th = document.createElement('th');
+                        th.textContent = i;
+                        headerRow.appendChild(th);
+                    }
+                } else if (lessonCount < currentCount) {
+                    // Remove columns from the end
+                    for (let i = currentCount; i > lessonCount; i--) {
+                        headerRow.removeChild(headerRow.lastElementChild);
+                    }
+                }
+                
+                // Update body rows
+                table.querySelectorAll('tbody tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    const currentCells = cells.length - 1; // minus day name column
+                    
+                    if (lessonCount > currentCells) {
+                        // Add cells - find the name pattern from existing inputs
+                        const existingInput = row.querySelector('input[type="text"]');
+                        let nameBase = '';
+                        if (existingInput) {
+                            // e.g. schedule_0_Monday[] -> schedule_0_Monday[]
+                            nameBase = existingInput.name;
+                        }
+                        for (let i = currentCells; i < lessonCount; i++) {
+                            const td = document.createElement('td');
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.name = nameBase;
+                            input.value = '';
+                            input.style.width = '100%';
+                            td.appendChild(input);
+                            row.appendChild(td);
+                        }
+                    } else if (lessonCount < currentCells) {
+                        for (let i = currentCells; i > lessonCount; i--) {
+                            row.removeChild(row.lastElementChild);
+                        }
+                    }
+                });
+            });
+        }
+
         function addClass() {
             const classList = document.getElementById('class-list');
-            const wrapperContainer = document.querySelector('.schedule-table-wrapper') ? document.querySelector('.schedule-table-wrapper').parentElement : document.querySelector('#tab-classes .card > div > div:last-child');
+            const wrapperContainer = document.getElementById('schedule-wrapper-container');
             
             // Use timestamp for unique ID to avoid collision
             const newIndex = Date.now();
@@ -781,12 +926,31 @@
                     }
                 });
             } else {
-                // Fallback if no classes exist (shouldn't happen often if Default Data is there, but for robustness)
-                // We would need to recreate the table structure. 
-                // For now, let's assume at least one exists or we reload. 
-                // Ideally we should have a hidden template. 
-                alert("Lütfen sayfayı yenileyip tekrar deneyin (Şablon bulunamadı).");
-                return;
+                // Create table from scratch when no existing schedule exists
+                newWrapper = document.createElement('div');
+                newWrapper.className = 'schedule-table-wrapper';
+                newWrapper.id = 'schedule-' + newIndex;
+                newWrapper.style.display = 'none';
+                
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                const trDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'];
+                
+                let tableHTML = `<h3>${className} - Haftalık Program</h3>`;
+                tableHTML += `<input type="text" name="class_name_${newIndex}" value="${className}" placeholder="Sınıf Adı" style="margin-bottom: 10px; width: 200px;">`;
+                const lessonCount = parseInt(document.getElementById('lesson_count_select').value) || 8;
+                tableHTML += '<table><thead><tr><th style="width: 100px;">Gün</th>';
+                for (let i = 1; i <= lessonCount; i++) { tableHTML += `<th>${i}</th>`; }
+                tableHTML += '</tr></thead><tbody>';
+                
+                for (let d = 0; d < days.length; d++) {
+                    tableHTML += `<tr><td><strong>${trDays[d]}</strong></td>`;
+                    for (let i = 0; i < lessonCount; i++) {
+                        tableHTML += `<td><input type="text" name="schedule_${newIndex}_${days[d]}[]" value="" style="width: 100%;"></td>`;
+                    }
+                    tableHTML += '</tr>';
+                }
+                tableHTML += '</tbody></table>';
+                newWrapper.innerHTML = tableHTML;
             }
             
             wrapperContainer.appendChild(newWrapper);

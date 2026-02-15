@@ -20,6 +20,7 @@ _data_lock = threading.Lock()
 DEFAULT_DATA = {
     "duty_roster": [],
     "class_schedules": [],
+    "lesson_count": 8,
     "birthdays": [],
     "messages": ["Akıllı Okul Panosu Sistemine Hoşgeldiniz"],
     "quotes": ["Kitap okumayı unutmayın."],
@@ -45,7 +46,15 @@ DEFAULT_DATA = {
         {"id": "card-classes", "title": "Sınıf Durumları", "visible": True, "type": "classes"},
         {"id": "card-riddle", "title": "Bilmece/Soru", "visible": True, "type": "riddle"}
     ],
-    "schedule": [],
+    "schedule": {
+        "groups": [
+            {
+                "name": "Varsayılan",
+                "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                "items": []
+            }
+        ]
+    },
     "marquee": {
         "font_size": "1.2",
         "duration": "30",
@@ -80,6 +89,19 @@ def load_data():
         existing_ids = [item.get('id') for item in data.get('layout', [])]
         if 'card-riddle' not in existing_ids:
             data['layout'].append({"id": "card-riddle", "title": "Bilmece/Soru", "visible": True, "type": "riddle"})
+
+        # Migration: Convert old flat schedule list to new group format
+        schedule = data.get('schedule', {})
+        if isinstance(schedule, list):
+            data['schedule'] = {
+                "groups": [
+                    {
+                        "name": "Varsayılan",
+                        "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                        "items": schedule
+                    }
+                ]
+            }
 
         return data
 
