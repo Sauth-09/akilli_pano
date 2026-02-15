@@ -33,6 +33,9 @@ else:
     RESOURCE_DIR = USER_DATA_DIR
 
 DATA_DIR = os.path.join(USER_DATA_DIR, 'data')
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
 DATA_FILE = os.path.join(DATA_DIR, 'data.json')
 
 # Web Configuration

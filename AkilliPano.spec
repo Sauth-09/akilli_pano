@@ -5,7 +5,7 @@ a = Analysis(
     ['launcher.py'],
     pathex=[],
     binaries=[],
-    datas=[('src/web/templates', 'src/web/templates'), ('src/web/static', 'src/web/static'), ('logo.ico', '.')],
+    datas=[('src/web/templates', 'src/web/templates'), ('logo.ico', '.')], 
     hiddenimports=['src.web', 'src.bot', 'pystray', 'PIL', 'pandas', 'openpyxl'],
     hookspath=[],
     hooksconfig={},
@@ -14,6 +14,9 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+# Append content from Tree to a.datas (Tree returns 3-tuple TOC format, which a.datas accepts)
+a.datas += Tree('src/web/static', prefix='src/web/static', excludes=['slideshow'])
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
