@@ -95,6 +95,17 @@
 
                     {% elif item.type == 'classes' %}
                     <!-- Merged into status card -->
+
+                    {% elif item.type == 'riddle' %}
+                    <div class="card riddle-card" id="{{ item.id }}">
+                        <h2>❓ {{ item.title }}</h2>
+                        <div id="riddle-container" class="riddle-content" style="position: relative; width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 8px; overflow: hidden;">
+                            <img id="riddle-img" src="" style="width: 100%; height: auto; display: none;">
+                            <video id="riddle-video" src="" style="width: 100%; height: auto; display: none;" muted autoplay loop></video>
+                            <div id="riddle-loading" style="color: #666;">Yükleniyor...</div>
+                            <div id="riddle-empty" style="display: none; color: #666; padding: 20px; text-align: center;">Henüz bilmece yok.</div>
+                        </div>
+                    </div>
                     {% endif %}
 
                     {% endif %}
@@ -147,6 +158,17 @@
 
                     {% elif item.type == 'classes' %}
                     <!-- Merged into status card -->
+
+                    {% elif item.type == 'riddle' %}
+                    <div class="card riddle-card" id="{{ item.id }}">
+                        <h2>❓ {{ item.title }}</h2>
+                        <div id="riddle-container" class="riddle-content" style="position: relative; width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 8px; overflow: hidden;">
+                            <img id="riddle-img" src="" style="width: 100%; height: auto; display: none;">
+                            <video id="riddle-video" src="" style="width: 100%; height: auto; display: none;" muted autoplay loop></video>
+                            <div id="riddle-loading" style="color: #666;">Yükleniyor...</div>
+                            <div id="riddle-empty" style="display: none; color: #666; padding: 20px; text-align: center;">Henüz bilmece yok.</div>
+                        </div>
+                    </div>
                     {% endif %}
 
                     {% endif %}

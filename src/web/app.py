@@ -8,6 +8,7 @@ import sys
 import pandas as pd
 import subprocess
 from logging.handlers import RotatingFileHandler
+import traceback
 
 # Conditional import for Windows-only module
 try:
@@ -52,6 +53,7 @@ DEFAULT_DATA = {
     "class_schedules": [],
     "birthdays": [],
     "messages": ["Akıllı Okul Panosu Sistemine Hoşgeldiniz"],
+    "quotes": ["Kitap okumayı unutmayın."],
     "school_name": "OKUL ADI",
     "logo_url": "",
     "slideshow": {
@@ -71,7 +73,8 @@ DEFAULT_DATA = {
         {"id": "card-quote", "title": "Günün Sözü", "visible": True, "type": "quote"},
         {"id": "card-countdown", "title": "Geri Sayım", "visible": True, "type": "countdown"},
         {"id": "card-birthdays", "title": "Doğum Günleri", "visible": True, "type": "birthdays"},
-        {"id": "card-classes", "title": "Sınıf Durumları", "visible": True, "type": "classes"}
+        {"id": "card-classes", "title": "Sınıf Durumları", "visible": True, "type": "classes"},
+        {"id": "card-riddle", "title": "Bilmece/Soru", "visible": True, "type": "riddle"}
     ],
     "schedule": [],
     "marquee": {
@@ -96,6 +99,12 @@ def load_data():
                         data[k] = v
         except Exception as e:
             app.logger.error(f"Error loading data.json: {e}")
+    
+    # Migration: Ensure new cards exist in layout
+    existing_ids = [item.get('id') for item in data.get('layout', [])]
+    if 'card-riddle' not in existing_ids:
+        data['layout'].append({"id": "card-riddle", "title": "Bilmece/Soru", "visible": True, "type": "riddle"})
+    
     return data
 
 def save_data(data):
@@ -133,6 +142,216 @@ def rotate_roster(data):
                 if 'schedule' not in item: item['schedule'] = {}
                 item['schedule'][day] = rotated_teachers[i]
     return data
+
+def handle_save_settings(data):
+    # General Settings Save
+    data['school_name'] = request.form.get('school_name')
+    
+    # --- ENV Update Start ---
+    new_bot_token = request.form.get('bot_token', '').strip()
+    new_admin_ids = request.form.get('admin_ids', '').strip()
+    new_access_code = request.form.get('bot_access_code', '').strip()
+    # Checkbox not present means False usually, but we need to check if form was submitted
+    # If checkbox is unchecked, it won't be in request.form
+    new_ssl_verify = 'True' if request.form.get('bot_ssl_verify') else 'False'
+    
+    env_updates = {}
+    if new_bot_token:
+        env_updates['BOT_TOKEN'] = new_bot_token
+    if new_admin_ids:
+        # Validate admin_ids format roughly (numbers and commas)
+        env_updates['ADMIN_IDS'] = new_admin_ids
+    if new_access_code:
+        env_updates['BOT_ACCESS_CODE'] = new_access_code
+    
+    # Always update SSL verify setting since it's a checkbox
+    env_updates['BOT_SSL_VERIFY'] = new_ssl_verify
+    
+    if env_updates:
+        config.update_env_file(env_updates)
+        # Update runtime config variables so they are reflected in UI immediately (if needed)
+        # Note: This won't update the running bot process until restart, but updates the UI view.
+        if 'BOT_TOKEN' in env_updates: config.BOT_TOKEN = env_updates['BOT_TOKEN']
+        if 'BOT_ACCESS_CODE' in env_updates: config.BOT_ACCESS_CODE = env_updates['BOT_ACCESS_CODE']
+        if 'BOT_SSL_VERIFY' in env_updates: config.BOT_SSL_VERIFY = (new_ssl_verify == 'True')
+        if 'ADMIN_IDS' in env_updates:
+                try:
+                    config.ADMIN_IDS = [int(x.strip()) for x in env_updates['ADMIN_IDS'].split(',') if x.strip()]
+                except: pass
+    # --- ENV Update End ---
+
+    # Update data.json legacy access code if used there, though we are moving to .env
+    data['bot_access_code'] = new_access_code
+    
+    # Logo Upload Handling
+    if 'logo_file' in request.files:
+        file = request.files['logo_file']
+        if file.filename != '':
+            # Ensure static/img exists
+            img_dir = os.path.join(app.static_folder, 'img')
+            if not os.path.exists(img_dir):
+                os.makedirs(img_dir)
+            
+            # Save file with a standard name or original name
+            # Let's use 'school_logo' + extension to keep it simple and overwrite easily
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico']:
+                filename = f"school_logo{ext}"
+                full_path = os.path.join(img_dir, filename)
+                file.save(full_path)
+                
+                # Update data with local path
+                data['logo_url'] = url_for('static', filename=f'img/{filename}')
+    
+    # Fallback to URL input if no file uploaded, but only if url input is provided/changed?
+    logo_url_input = request.form.get('logo_url')
+    if logo_url_input and logo_url_input.strip() != '':
+        # Only update if user explicitly entered a URL (or kept the old one)
+        # But if we just uploaded a file, we set data['logo_url'] above.
+        # If we want upload to take precedence:
+        if 'logo_file' in request.files and request.files['logo_file'].filename != '':
+            pass # Already handled above
+        else:
+            data['logo_url'] = logo_url_input
+    
+    data['countdown'] = {
+        'label': request.form.get('countdown_label'),
+        'target_date': request.form.get('countdown_date')
+    }
+    
+    raw_msgs = request.form.get('messages', '')
+    data['messages'] = [m.strip() for m in raw_msgs.split('\\n') if m.strip()]
+    
+    raw_quotes = request.form.get('quotes', '')
+    data['quotes'] = [q.strip() for q in raw_quotes.split('\\n') if q.strip()]
+    
+    names = request.form.getlist('schedule_name[]')
+    starts = request.form.getlist('schedule_start[]')
+    ends = request.form.getlist('schedule_end[]')
+    
+    new_schedule = []
+    for i, name in enumerate(names):
+        if i < len(starts) and i < len(ends):
+            new_schedule.append({
+                'name': name,
+                'start': starts[i],
+                'end': ends[i]
+            })
+    data['schedule'] = new_schedule
+    
+    locations = request.form.getlist('location[]')
+    mondays = request.form.getlist('Monday[]')
+    tuesdays = request.form.getlist('Tuesday[]')
+    wednesdays = request.form.getlist('Wednesday[]')
+    thursdays = request.form.getlist('Thursday[]')
+    fridays = request.form.getlist('Friday[]')
+    
+    new_roster = []
+    for i, loc_name in enumerate(locations):
+        if i < len(mondays):
+            new_roster.append({
+                "location": loc_name,
+                "schedule": {
+                    "Monday": mondays[i],
+                    "Tuesday": tuesdays[i],
+                    "Wednesday": wednesdays[i],
+                    "Thursday": thursdays[i],
+                    "Friday": fridays[i]
+                }
+            })
+    data['duty_roster'] = new_roster
+    
+    # Marquee Settings
+    data['marquee'] = {
+        'font_size': request.form.get('marquee_font_size', '1.2'),
+        'duration': request.form.get('marquee_duration', '30'),
+        'color': request.form.get('marquee_color', '#2c3e50'),
+        'font_family': request.form.get('marquee_font_family', "'Roboto', sans-serif")
+    }
+
+    # Class Schedules Processing (Shortened for brevity, assume same logic as before or re-include)
+    processed_schedules = []
+    for i in range(50):
+        name_key = f'class_name_{i}'
+        if name_key in request.form:
+            c_name = request.form[name_key]
+            program = {}
+            days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+            for day in days:
+                lessons = request.form.getlist(f'schedule_{i}_{day}[]')
+                program[day] = lessons
+            processed_schedules.append({
+                "name": c_name,
+                "program": program
+            })
+    if processed_schedules:
+        data['class_schedules'] = processed_schedules
+
+    # Layout Settings
+    layout_ids = request.form.getlist('layout_id[]')
+    # Checkbox values are only sent if checked. This makes handling checkboxes in a list tricky if they aren't uniquely named.
+    # Alternative: We iterate over the received IDs, and check if `visible_{id}` is in form.
+    new_layout = []
+    if layout_ids:
+        # We need to know the 'type' and 'title' for each ID. 
+        # Since we don't send type/title back from form usually (unless hidden inputs), we might rely on existing data or hidden inputs.
+        # Let's simple use hidden inputs for type and title too.
+        layout_titles = request.form.getlist('layout_title[]')
+        layout_types = request.form.getlist('layout_type[]')
+        
+        for i, lid in enumerate(layout_ids):
+            visible_key = f'layout_visible_{lid}'
+            is_visible = request.form.get(visible_key) == 'on'
+            
+            # Safe access
+            title = layout_titles[i] if i < len(layout_titles) else ""
+            ltype = layout_types[i] if i < len(layout_types) else ""
+            
+            new_layout.append({
+                "id": lid,
+                "title": title,
+                "visible": is_visible,
+                "type": ltype
+            })
+        data['layout'] = new_layout
+
+    # Slideshow Settings
+    # Helper to get int safely
+    def get_int(key, default):
+        try:
+            return int(request.form.get(key, default))
+        except (ValueError, TypeError):
+            return default
+
+    # Get existing or default
+    exist_ss = data.get('slideshow', {})
+    
+    # Duration: if provided use it, else keep existing, else default 10
+    # Note: Input sends value in seconds, we store ms
+    dur_input = request.form.get('slideshow_duration')
+    if dur_input:
+        new_duration = int(dur_input) * 1000
+    else:
+        new_duration = exist_ss.get('duration', 10000)
+
+    data['slideshow'] = {
+        'duration': new_duration,
+        'transition': request.form.get('slideshow_transition', exist_ss.get('transition', 'fade')),
+        'order': request.form.get('slideshow_order', exist_ss.get('order', 'newest')),
+        'fit_mode': request.form.get('slideshow_fit_mode', exist_ss.get('fit_mode', 'contain'))
+    }
+    
+    # Performance Mode
+    data['performance_mode'] = request.form.get('performance_mode', 'high')
+
+    # Auto-rotate setting
+    if 'duty_rotation' not in data: data['duty_rotation'] = {}
+    data['duty_rotation']['auto_rotate'] = request.form.get('auto_rotate') == 'on'
+    if data['duty_rotation']['auto_rotate'] and data['duty_rotation'].get('last_week_number', 0) == 0:
+        data['duty_rotation']['last_week_number'] = datetime.now().isocalendar()[1]
+
+    save_data(data)
+    return "Ayarlar başarıyla kaydedildi!"
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -248,185 +467,20 @@ def admin():
                         message = f"Hata: {str(e)}"
         
         elif action == 'save_settings' or action is None:
-            # General Settings Save
-            data['school_name'] = request.form.get('school_name')
-            data['bot_access_code'] = request.form.get('bot_access_code', 'okulpanosu')
-            
-            # Logo Upload Handling
-            if 'logo_file' in request.files:
-                file = request.files['logo_file']
-                if file.filename != '':
-                    # Ensure static/img exists
-                    img_dir = os.path.join(app.static_folder, 'img')
-                    if not os.path.exists(img_dir):
-                        os.makedirs(img_dir)
-                    
-                    # Save file with a standard name or original name
-                    # Let's use 'school_logo' + extension to keep it simple and overwrite easily
-                    ext = os.path.splitext(file.filename)[1].lower()
-                    if ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico']:
-                        filename = f"school_logo{ext}"
-                        full_path = os.path.join(img_dir, filename)
-                        file.save(full_path)
-                        
-                        # Update data with local path
-                        data['logo_url'] = url_for('static', filename=f'img/{filename}')
-            
-            # Fallback to URL input if no file uploaded, but only if url input is provided/changed?
-            # User might want to switch back to URL. 
-            # If text input is not empty, use it. If empty and we just uploaded, we used upload.
-            # If both empty, keep existing? 
-            # Let's prioritize Upload if present, else Text input. 
-            # If Text input is provided, it overrides previous file? 
-            # Or better: Text input value is populated with current URL. User changes it or Uploads new.
-            
-            logo_url_input = request.form.get('logo_url')
-            if logo_url_input and logo_url_input.strip() != '':
-                # Only update if user explicitly entered a URL (or kept the old one)
-                # But if we just uploaded a file, we set data['logo_url'] above.
-                # If we want upload to take precedence:
-                if 'logo_file' in request.files and request.files['logo_file'].filename != '':
-                    pass # Already handled above
-                else:
-                    data['logo_url'] = logo_url_input
-            
-            data['countdown'] = {
-                'label': request.form.get('countdown_label'),
-                'target_date': request.form.get('countdown_date')
-            }
-            
-            raw_msgs = request.form.get('messages', '')
-            data['messages'] = [m.strip() for m in raw_msgs.split('\n') if m.strip()]
-            
-            names = request.form.getlist('schedule_name[]')
-            starts = request.form.getlist('schedule_start[]')
-            ends = request.form.getlist('schedule_end[]')
-            
-            new_schedule = []
-            for i, name in enumerate(names):
-                if i < len(starts) and i < len(ends):
-                    new_schedule.append({
-                        'name': name,
-                        'start': starts[i],
-                        'end': ends[i]
-                    })
-            data['schedule'] = new_schedule
-            
-            locations = request.form.getlist('location[]')
-            mondays = request.form.getlist('Monday[]')
-            tuesdays = request.form.getlist('Tuesday[]')
-            wednesdays = request.form.getlist('Wednesday[]')
-            thursdays = request.form.getlist('Thursday[]')
-            fridays = request.form.getlist('Friday[]')
-            
-            new_roster = []
-            for i, loc_name in enumerate(locations):
-                if i < len(mondays):
-                    new_roster.append({
-                        "location": loc_name,
-                        "schedule": {
-                            "Monday": mondays[i],
-                            "Tuesday": tuesdays[i],
-                            "Wednesday": wednesdays[i],
-                            "Thursday": thursdays[i],
-                            "Friday": fridays[i]
-                        }
-                    })
-            data['duty_roster'] = new_roster
-            
-            # Marquee Settings
-            data['marquee'] = {
-                'font_size': request.form.get('marquee_font_size', '1.2'),
-                'duration': request.form.get('marquee_duration', '30'),
-                'color': request.form.get('marquee_color', '#2c3e50'),
-                'font_family': request.form.get('marquee_font_family', "'Roboto', sans-serif")
-            }
+            try:
+                message = handle_save_settings(data)
+            except Exception as e:
+                app.logger.error(f"Error saving settings: {e}")
+                app.logger.error(traceback.format_exc())
+                message = f"Hata oluştu: {str(e)}"
 
-            # Class Schedules Processing (Shortened for brevity, assume same logic as before or re-include)
-            processed_schedules = []
-            for i in range(50):
-                name_key = f'class_name_{i}'
-                if name_key in request.form:
-                    c_name = request.form[name_key]
-                    program = {}
-                    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-                    for day in days:
-                        lessons = request.form.getlist(f'schedule_{i}_{day}[]')
-                        program[day] = lessons
-                    processed_schedules.append({
-                        "name": c_name,
-                        "program": program
-                    })
-            if processed_schedules:
-                data['class_schedules'] = processed_schedules
-
-            # Layout Settings
-            layout_ids = request.form.getlist('layout_id[]')
-            # Checkbox values are only sent if checked. This makes handling checkboxes in a list tricky if they aren't uniquely named.
-            # Alternative: We iterate over the received IDs, and check if `visible_{id}` is in form.
-            new_layout = []
-            if layout_ids:
-                # We need to know the 'type' and 'title' for each ID. 
-                # Since we don't send type/title back from form usually (unless hidden inputs), we might rely on existing data or hidden inputs.
-                # Let's simple use hidden inputs for type and title too.
-                layout_titles = request.form.getlist('layout_title[]')
-                layout_types = request.form.getlist('layout_type[]')
-                
-                for i, lid in enumerate(layout_ids):
-                    visible_key = f'layout_visible_{lid}'
-                    is_visible = request.form.get(visible_key) == 'on'
-                    
-                    # Safe access
-                    title = layout_titles[i] if i < len(layout_titles) else ""
-                    ltype = layout_types[i] if i < len(layout_types) else ""
-                    
-                    new_layout.append({
-                        "id": lid,
-                        "title": title,
-                        "visible": is_visible,
-                        "type": ltype
-                    })
-                data['layout'] = new_layout
-
-            # Slideshow Settings
-            # Helper to get int safely
-            def get_int(key, default):
-                try:
-                    return int(request.form.get(key, default))
-                except (ValueError, TypeError):
-                    return default
-
-            # Get existing or default
-            exist_ss = data.get('slideshow', {})
-            
-            # Duration: if provided use it, else keep existing, else default 10
-            # Note: Input sends value in seconds, we store ms
-            dur_input = request.form.get('slideshow_duration')
-            if dur_input:
-                new_duration = int(dur_input) * 1000
-            else:
-                new_duration = exist_ss.get('duration', 10000)
-
-            data['slideshow'] = {
-                'duration': new_duration,
-                'transition': request.form.get('slideshow_transition', exist_ss.get('transition', 'fade')),
-                'order': request.form.get('slideshow_order', exist_ss.get('order', 'newest')),
-                'fit_mode': request.form.get('slideshow_fit_mode', exist_ss.get('fit_mode', 'contain'))
-            }
-            
-            # Performance Mode
-            data['performance_mode'] = request.form.get('performance_mode', 'high')
-
-            # Auto-rotate setting
-            if 'duty_rotation' not in data: data['duty_rotation'] = {}
-            data['duty_rotation']['auto_rotate'] = request.form.get('auto_rotate') == 'on'
-            if data['duty_rotation']['auto_rotate'] and data['duty_rotation'].get('last_week_number', 0) == 0:
-                data['duty_rotation']['last_week_number'] = datetime.now().isocalendar()[1]
-
-            save_data(data)
-            message = "Ayarlar başarıyla kaydedildi!"
-
-    return render_template('admin.html', data=data, message=message)
+    # Prepare env data for admin panel
+    env_data = {
+        'bot_token': config.BOT_TOKEN,
+        'admin_ids': ", ".join(map(str, config.ADMIN_IDS)),
+        'bot_access_code': config.BOT_ACCESS_CODE
+    }
+    return render_template('admin.html', data=data, message=message, env_data=env_data)
 
 @app.route('/api/get_status')
 def get_status():
@@ -592,7 +646,9 @@ def get_status():
         "date": now.strftime("%d.%m.%Y"),
         "time": current_time_str,
         "day": current_day_tr,
+        "day": current_day_tr,
         "messages": data.get('messages', []),
+        "quotes": data.get('quotes', []),
         "countdown": data.get('countdown', {}),
         "slideshow": data.get('slideshow', {}) 
     })
@@ -726,13 +782,31 @@ def get_slides_with_info():
             if ext in valid_exts:
                 full_path = os.path.join(config.SLIDESHOW_DIR, f)
                 size_kb = os.path.getsize(full_path) / 1024
+                mtime = os.path.getmtime(full_path)
+                dt = datetime.fromtimestamp(mtime)
+                
                 slides.append({
                     'name': f,
                     'size': f"{size_kb:.0f} KB",
                     'type': 'image' if ext in ['.jpg', '.jpeg', '.png', '.gif'] else 'video',
+                    'timestamp': mtime,
+                    'date_str': dt.strftime("%d.%m.%Y %H:%M"),
                     'url': url_for('static', filename=f'slideshow/{f}')
                 })
     return jsonify(slides)
+
+
+@app.route('/api/riddles')
+def get_riddles():
+    """Returns list of riddle images."""
+    riddles = []
+    if os.path.exists(config.RIDDLES_DIR):
+        valid_exts = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        for f in sorted(os.listdir(config.RIDDLES_DIR)):
+            ext = os.path.splitext(f)[1].lower()
+            if ext in valid_exts:
+                riddles.append(url_for('static', filename=f'riddles/{f}'))
+    return jsonify(riddles)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=config.WEB_PORT, debug=True)

@@ -141,6 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Determine target: hook or legacy fallback? 
                 // Since we implemented layout, we rely on hook. If hook missing (hidden in layout), we don't show.
                 if (birthdayHook) {
+                    // Show parent wrapper
+                    if (birthdayHook.parentElement) {
+                        birthdayHook.parentElement.style.display = 'block';
+                    }
+
                     let birthdayContainer = document.getElementById('birthday-special-card');
                     if (!birthdayContainer) {
                         birthdayContainer = document.createElement('div');
@@ -177,13 +182,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 // If birthdays empty, remove the card if exists
                 const birthdayContainer = document.getElementById('birthday-special-card');
                 if (birthdayContainer) birthdayContainer.remove();
+
+                // Also hide parent wrapper to remove margin space
+                if (birthdayHook && birthdayHook.parentElement) {
+                    birthdayHook.parentElement.style.display = 'none';
+                }
             }
 
             // Update daily message (random or first)
-            if (data.messages && data.messages.length > 0) {
-                // Pick a random one for variety every refresh
-                const randomMsg = data.messages[Math.floor(Math.random() * data.messages.length)];
-                dailyMessageEl.textContent = `"${randomMsg}"`;
+            // Now uses 'quotes' array instead of 'messages'
+            if (data.quotes && data.quotes.length > 0) {
+                const randomQuote = data.quotes[Math.floor(Math.random() * data.quotes.length)];
+                dailyMessageEl.textContent = `"${randomQuote}"`;
+            } else if (data.messages && data.messages.length > 0) {
+                // Fallback if no quotes defined but messages exist (legacy support)
+                // remove this if strict separation desired, but good for transition
+                // dailyMessageEl.textContent = `"${data.messages[0]}"`; 
+                dailyMessageEl.textContent = "...";
+            } else {
+                dailyMessageEl.textContent = "...";
             }
 
             // Update Countdown
@@ -194,6 +211,23 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update Slideshow Config
             if (data.slideshow) {
                 slideshowConfig = data.slideshow;
+            }
+
+            // Update Marquee Content
+            const marqueeEl = document.getElementById('footer-marquee');
+            if (marqueeEl && data.messages) {
+                const newText = data.messages.length > 0 ? data.messages.join('   •   ') : 'Akıllı Okul Panosu Sistemine Hoşgeldiniz';
+                if (marqueeEl.textContent !== newText) {
+                    marqueeEl.textContent = newText;
+                }
+
+                // Update Marquee Style if needed (optional, but good for full sync)
+                if (data.marquee) {
+                    if (data.marquee.duration) marqueeEl.style.animationDuration = data.marquee.duration + 's';
+                    if (data.marquee.font_size) marqueeEl.style.fontSize = data.marquee.font_size + 'rem';
+                    if (data.marquee.color) marqueeEl.style.color = data.marquee.color;
+                    if (data.marquee.font_family) marqueeEl.style.fontFamily = data.marquee.font_family;
+                }
             }
 
         } catch (error) {
@@ -402,6 +436,91 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hook to update config from fetchStatus (we need to modify fetchStatus slightly to expose data or write to global)
     // To avoid modifying fetchStatus again in this tool call (complexity), let's assume fetchStatus writes to global `slideshowConfig` if we declare it at top.
     // I will use another replace to inject logic into fetchStatus.
+    // --- RIDDLE SLIDESHOW LOGIC ---
+    let riddleQueue = [];
+    let currentRiddleIndex = -1;
+    let riddleTimer = null;
+    const riddleImg = document.getElementById('riddle-img');
+    const riddleVideo = document.getElementById('riddle-video');
+    const riddleLoading = document.getElementById('riddle-loading');
+    const riddleEmpty = document.getElementById('riddle-empty');
+
+    async function fetchRiddles() {
+        if (!document.getElementById('riddle-container')) return; // Exit if card not present
+        try {
+            const response = await fetch('/api/riddles');
+            const newQueue = await response.json();
+
+            if (newQueue.length === 0) {
+                riddleQueue = [];
+                showNoRiddles();
+            } else {
+                const isDifferent = JSON.stringify(riddleQueue) !== JSON.stringify(newQueue);
+                if (isDifferent) {
+                    riddleQueue = newQueue;
+                    if (currentRiddleIndex >= riddleQueue.length) currentRiddleIndex = -1;
+                    if (currentRiddleIndex === -1 && riddleQueue.length > 0) {
+                        playNextRiddle();
+                    }
+                }
+            }
+        } catch (error) { console.error('Riddle fetch error:', error); }
+    }
+
+    function showNoRiddles() {
+        if (riddleImg) riddleImg.style.display = 'none';
+        if (riddleVideo) { riddleVideo.style.display = 'none'; riddleVideo.pause(); }
+        if (riddleLoading) riddleLoading.style.display = 'none';
+        if (riddleEmpty) riddleEmpty.style.display = 'block';
+    }
+
+    function playNextRiddle() {
+        if (riddleQueue.length === 0) {
+            showNoRiddles();
+            return;
+        }
+
+        if (riddleLoading) riddleLoading.style.display = 'none';
+        if (riddleEmpty) riddleEmpty.style.display = 'none';
+
+        currentRiddleIndex = (currentRiddleIndex + 1) % riddleQueue.length;
+        const url = riddleQueue[currentRiddleIndex];
+        const ext = url.split('.').pop().toLowerCase();
+
+        // Standard fade effect for riddles
+        if (riddleImg) {
+            riddleImg.style.opacity = 0;
+            riddleImg.style.transition = 'opacity 0.5s';
+        }
+
+        setTimeout(() => {
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                if (riddleVideo) { riddleVideo.style.display = 'none'; riddleVideo.pause(); }
+                if (riddleImg) {
+                    riddleImg.onload = () => {
+                        riddleImg.style.display = 'block';
+                        setTimeout(() => riddleImg.style.opacity = 1, 50);
+                        clearTimeout(riddleTimer);
+                        riddleTimer = setTimeout(playNextRiddle, 10000); // 10s per riddle
+                    };
+                    riddleImg.src = url;
+                }
+            } else if (['mp4', 'webm'].includes(ext)) {
+                if (riddleImg) riddleImg.style.display = 'none';
+                if (riddleVideo) {
+                    riddleVideo.src = url;
+                    riddleVideo.style.display = 'block';
+                    riddleVideo.play().catch(e => { playNextRiddle(); });
+                    riddleVideo.onended = () => playNextRiddle();
+                } else playNextRiddle();
+            } else playNextRiddle();
+        }, 500);
+    }
+
+    // Init Riddle Fetch
+    setInterval(fetchRiddles, 30000); // Check every 30s
+    fetchRiddles();
+
     // --- CONTEXT MENU LOGIC ---
     const contextMenu = document.getElementById('custom-context-menu');
     const menuFullscreen = document.getElementById('menu-fullscreen');
@@ -455,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Settings Redirect
         if (menuSettings) {
             menuSettings.addEventListener('click', () => {
-                window.location.href = '/admin';
+                window.open('/admin', '_blank');
             });
         }
     }

@@ -3,8 +3,8 @@ import logging
 import uuid
 import sys
 import json
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
 # Import config from parent directory
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -66,26 +66,27 @@ def is_authorized(user_id):
 def is_admin(user_id):
     return user_id in config.ADMIN_IDS
 
-# --- Menu ---
+# --- State Management ---
+user_states = {}
 
-MENU_TEXT_AUTHORIZED = (
-    "📋 **Kullanılabilir Komutlar:**\n\n"
-    "📸 **Medya Yükleme** — Fotoğraf veya video gönderin\n"
-    "✏️ `/mesaj <metin>` — Kayan yazıyı değiştir\n"
-    "📝 `/mesajekle <metin>` — Kayan yazıya yeni satır ekle\n"
-    "📖 `/mesajlar` — Mevcut kayan yazıları göster\n"
-    "🏫 `/okul <isim>` — Okul adını değiştir\n"
-    "⏳ `/gerisayim <etiket> | <tarih>` — Geri sayımı ayarla\n"
-    "📊 `/durum` — Pano durumunu göster\n"
-    "🆔 `/id` — Telegram ID'nizi göster\n"
-)
+# State Constants
+STATE_NONE = 0
+STATE_WAITING_MARQUEE = 1
+STATE_WAITING_MARQUEE_ADD = 2
+STATE_WAITING_QUOTE = 3
+STATE_WAITING_QUOTE_ADD = 4
+STATE_WAITING_RIDDLE = 5
 
-MENU_TEXT_UNAUTHORIZED = (
-    "📋 **Kullanılabilir Komutlar:**\n\n"
-    "🔑 `/giris <şifre>` — Öğretmen girişi\n"
-    "🆔 `/id` — Telegram ID'nizi göster\n"
-    "\n⚠️ Diğer komutları kullanmak için önce giriş yapmalısınız."
-)
+# --- Keyboards ---
+
+def get_main_keyboard():
+    keyboard = [
+        [KeyboardButton("📜 Kayan Yazıyı Değiştir"), KeyboardButton("➕ Kayan Yazıya Ekle")],
+        [KeyboardButton("📖 Kayan Yazıyı Göster"), KeyboardButton("❓ Bilmece/Soru Yükle")],
+        [KeyboardButton("📢 Günün Sözünü Değiştir"), KeyboardButton("➕ Günün Sözü Ekle")],
+        [KeyboardButton("📖 Günün Sözünü Göster"), KeyboardButton("📊 Durum")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # --- Command Handlers ---
 
@@ -97,27 +98,36 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         role = "👑 Admin" if is_admin(user_id) else "✅ Yetkili Kullanıcı"
         text = (
             f"Merhaba **{first_name}**! 👋\n\n"
-            f"Rolünüz: {role}\n\n"
-            f"{MENU_TEXT_AUTHORIZED}"
+            f"Rolünüz: {role}\n"
+            "Aşağıdaki menüden işlem yapabilirsiniz."
+        )
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=text,
+            parse_mode='Markdown',
+            reply_markup=get_main_keyboard()
         )
     else:
         text = (
             f"Merhaba **{first_name}**! 👋\n\n"
-            "Bu bot okul panosunu yönetmek için kullanılır.\n\n"
-            f"{MENU_TEXT_UNAUTHORIZED}"
+            "Bu bot okul panosunu yönetmek için kullanılır.\n"
+            "Lütfen giriş yapın: `/giris <şifre>`"
         )
-    
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=text,
-        parse_mode='Markdown'
-    )
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=text,
+            parse_mode='Markdown'
+        )
 
 async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     if is_authorized(user_id):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="✅ Zaten yetkiniz var.")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id, 
+            text="✅ Zaten yetkiniz var.",
+            reply_markup=get_main_keyboard()
+        )
         return
 
     if not context.args:
@@ -143,7 +153,8 @@ async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_allowed_user(user_id)
         await context.bot.send_message(
             chat_id=update.effective_chat.id, 
-            text="✅ Giriş başarılı! Artık tüm komutları kullanabilirsiniz.\n\nKomutları görmek için herhangi bir mesaj yazın."
+            text="✅ Giriş başarılı! Artık butonları kullanabilirsiniz.",
+            reply_markup=get_main_keyboard()
         )
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Hatalı şifre.")
@@ -155,265 +166,108 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-# --- Kayan Yazı (Marquee) Commands ---
+# --- Standard Commands (Still avail via slash) ---
 
 async def mesaj_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Replace all marquee messages with a single new one"""
     user_id = update.effective_user.id
-    if not is_authorized(user_id):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Yetkiniz yok. Önce `/giris <şifre>` ile giriş yapın.", parse_mode='Markdown')
-        return
+    if not is_authorized(user_id): return
     
     if not context.args:
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id, 
-            text="Kullanım: `/mesaj <yeni kayan yazı metni>`\nÖrnek: `/mesaj Yarın okul tatildir.`",
-            parse_mode='Markdown'
-        )
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Kullanım: `/mesaj <metin>`")
         return
     
     new_message = ' '.join(context.args)
     data = load_data()
     data['messages'] = [new_message]
-    
     if save_data(data):
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"✅ Kayan yazı güncellendi:\n\n📢 _{new_message}_",
-            parse_mode='Markdown'
-        )
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Kayan yazı güncellendi:\n📢 _{new_message}_", parse_mode='Markdown')
     else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Kaydetme hatası oluştu.")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Hata.")
 
 async def mesaj_ekle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Add a new marquee message to existing ones"""
     user_id = update.effective_user.id
-    if not is_authorized(user_id):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Yetkiniz yok.", parse_mode='Markdown')
-        return
-    
-    if not context.args:
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text="Kullanım: `/mesajekle <ek kayan yazı metni>`",
-            parse_mode='Markdown'
-        )
-        return
-    
+    if not is_authorized(user_id): return
+    if not context.args: return
     new_message = ' '.join(context.args)
     data = load_data()
-    if 'messages' not in data:
-        data['messages'] = []
+    if 'messages' not in data: data['messages'] = []
     data['messages'].append(new_message)
-    
     if save_data(data):
-        count = len(data['messages'])
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"✅ Kayan yazıya eklendi (toplam {count} mesaj):\n\n📢 _{new_message}_",
-            parse_mode='Markdown'
-        )
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Kaydetme hatası.")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Eklendi. Toplam: {len(data['messages'])}")
 
 async def mesajlar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """List all current marquee messages"""
     user_id = update.effective_user.id
-    if not is_authorized(user_id):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Yetkiniz yok.")
-        return
-    
+    if not is_authorized(user_id): return
     data = load_data()
     messages = data.get('messages', [])
-    
     if not messages:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="📭 Kayan yazı boş.")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="📭 Mesaj yok.")
         return
-    
-    text = "📝 **Mevcut Kayan Yazılar:**\n\n"
-    for i, msg in enumerate(messages, 1):
-        text += f"  {i}. _{msg}_\n"
-    text += f"\nSilmek için: `/mesajsil <numara>`"
-    
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=text,
-        parse_mode='Markdown'
-    )
+    text = "📝 **Mesajlar:**\n" + "\n".join([f"{i+1}. {m}" for i, m in enumerate(messages)])
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode='Markdown')
 
 async def mesaj_sil_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Delete a specific marquee message by index"""
+    # Keep functionality for manual slash command users
+    pass 
+
+async def soz_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if not is_authorized(user_id):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Yetkiniz yok.")
-        return
-    
-    if not context.args:
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text="Kullanım: `/mesajsil <numara>`\nÖrnek: `/mesajsil 2`",
-            parse_mode='Markdown'
-        )
-        return
-    
-    try:
-        index = int(context.args[0]) - 1
-    except ValueError:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Geçerli bir numara girin.")
-        return
-    
+    if not is_authorized(user_id): return
+    if not context.args: return
+    new_quote = ' '.join(context.args)
     data = load_data()
-    messages = data.get('messages', [])
-    
-    if index < 0 or index >= len(messages):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"❌ Geçersiz numara. 1-{len(messages)} arası seçin.")
-        return
-    
-    removed = messages.pop(index)
-    data['messages'] = messages
-    
-    if save_data(data):
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"🗑️ Silindi: _{removed}_",
-            parse_mode='Markdown'
-        )
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Kaydetme hatası.")
+    data['quotes'] = [new_quote]
+    save_data(data)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Günün sözü: {new_quote}")
 
-# --- School & Countdown Commands ---
-
-async def okul_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Change school name"""
+async def sozekle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if not is_authorized(user_id):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Yetkiniz yok.")
-        return
-    
-    if not context.args:
-        data = load_data()
-        current = data.get('school_name', 'Belirtilmemiş')
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"🏫 Mevcut okul adı: **{current}**\n\nDeğiştirmek için: `/okul <yeni isim>`",
-            parse_mode='Markdown'
-        )
-        return
-    
-    new_name = ' '.join(context.args)
+    if not is_authorized(user_id): return
+    if not context.args: return
+    new_quote = ' '.join(context.args)
     data = load_data()
-    data['school_name'] = new_name
-    
-    if save_data(data):
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"✅ Okul adı güncellendi: **{new_name}**",
-            parse_mode='Markdown'
-        )
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Kaydetme hatası.")
+    if 'quotes' not in data: data['quotes'] = []
+    data['quotes'].append(new_quote)
+    save_data(data)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Söz eklendi. Toplam: {len(data['quotes'])}")
 
-async def gerisayim_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Set countdown label and date"""
+async def sozler_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if not is_authorized(user_id):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Yetkiniz yok.")
-        return
-    
-    if not context.args:
-        data = load_data()
-        cd = data.get('countdown', {})
-        label = cd.get('label', '-')
-        target = cd.get('target_date', '-')
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"⏳ Mevcut geri sayım:\n🏷️ Etiket: **{label}**\n📅 Tarih: **{target}**\n\n"
-                 "Değiştirmek için:\n`/gerisayim Yaz Tatili | 2026-06-13T09:00`",
-            parse_mode='Markdown'
-        )
-        return
-    
-    text = ' '.join(context.args)
-    
-    if '|' in text:
-        parts = text.split('|', 1)
-        label = parts[0].strip()
-        target_date = parts[1].strip()
-    else:
-        label = text
-        target_date = ""
-    
+    if not is_authorized(user_id): return
     data = load_data()
-    data['countdown'] = {
-        'label': label,
-        'target_date': target_date
-    }
-    
-    if save_data(data):
-        msg = f"✅ Geri sayım güncellendi:\n🏷️ {label}"
-        if target_date:
-            msg += f"\n📅 {target_date}"
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=msg, parse_mode='Markdown')
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Kaydetme hatası.")
+    quotes = data.get('quotes', [])
+    text = "📢 **Sözler:**\n" + "\n".join([f"{i+1}. {q}" for i, q in enumerate(quotes)]) if quotes else "📭 Söz yok."
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode='Markdown')
 
-# --- Status Command ---
+async def sozsil_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    pass
 
 async def durum_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show current panel status"""
     user_id = update.effective_user.id
-    if not is_authorized(user_id):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Yetkiniz yok.")
-        return
-    
+    if not is_authorized(user_id): return
     data = load_data()
-    
-    school = data.get('school_name', '-')
-    messages = data.get('messages', [])
-    msg_count = len(messages)
-    msg_preview = messages[0][:50] + '...' if messages and len(messages[0]) > 50 else (messages[0] if messages else '-')
-    
-    # Count slides
-    slide_count = 0
-    if os.path.exists(config.SLIDESHOW_DIR):
-        valid_exts = ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.webm']
-        slide_count = sum(1 for f in os.listdir(config.SLIDESHOW_DIR) if os.path.splitext(f)[1].lower() in valid_exts)
-    
-    cd = data.get('countdown', {})
-    cd_label = cd.get('label', '-')
-    cd_date = cd.get('target_date', '-') or '-'
-    
-    birthday_count = len(data.get('birthdays', []))
-    
-    text = (
-        "📊 **Pano Durumu**\n\n"
-        f"🏫 Okul: {school}\n"
-        f"📢 Kayan yazı: {msg_count} mesaj\n"
-        f"   └ _{msg_preview}_\n"
-        f"🖼️ Slayt: {slide_count} dosya\n"
-        f"🎂 Doğum günü: {birthday_count} kayıt\n"
-        f"⏳ Geri sayım: {cd_label} ({cd_date})\n"
-    )
-    
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=text,
-        parse_mode='Markdown'
-    )
+    text = f"🏫 Okul: {data.get('school_name', '-')}\n📢 Kayan Yazı: {len(data.get('messages', []))}\n💬 Sözler: {len(data.get('quotes', []))}"
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=text)
 
 # --- Media Upload ---
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    
     if not is_authorized(user_id):
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text="⚠️ Yetkiniz yok. Önce `/giris <şifre>` ile giriş yapın.",
-            parse_mode='Markdown'
-        )
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Yetkiniz yok.")
         return
-
+    
+    current_state = user_states.get(user_id, STATE_NONE)
+    target_dir = config.SLIDESHOW_DIR
+    success_msg = "✅ Slayt eklendi!"
+    
+    if current_state == STATE_WAITING_RIDDLE:
+        target_dir = config.RIDDLES_DIR
+        success_msg = "✅ Bilmece/Soru eklendi! (Başka gönderebilirsiniz)"
+        if not os.path.exists(config.RIDDLES_DIR):
+            os.makedirs(config.RIDDLES_DIR, exist_ok=True)
+    
     file = None
     file_name = f"{uuid.uuid4()}"
     
@@ -430,41 +284,130 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif mime and mime.startswith('video/'):
             file_name += ".mp4"
         else:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Sadece fotoğraf veya video kabul edilir.")
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Sadece fotoğraf/video.")
             return
         file = await update.message.document.get_file()
     else:
         return
 
-    file_path = os.path.join(config.SLIDESHOW_DIR, file_name)
+    file_path = os.path.join(target_dir, file_name)
     await file.download_to_drive(file_path)
-    
-    # Count total slides
-    valid_exts = ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.webm']
-    slide_count = sum(1 for f in os.listdir(config.SLIDESHOW_DIR) if os.path.splitext(f)[1].lower() in valid_exts)
-    
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=f"✅ Panoya eklendi! (Toplam {slide_count} slayt)"
-    )
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=success_msg)
 
-# --- Text Handler (Show Menu) ---
+# --- Text Handler (Interactive State Machine) ---
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    text = update.message.text
     
-    if is_authorized(user_id):
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=MENU_TEXT_AUTHORIZED,
-            parse_mode='Markdown'
-        )
-    else:
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=MENU_TEXT_UNAUTHORIZED,
-            parse_mode='Markdown'
-        )
+    if not is_authorized(user_id):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Önce giriş yapın: `/giris <şifre>`")
+        return
+
+    # Check Cancel
+    if text.lower() == 'iptal':
+        user_states[user_id] = STATE_NONE
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="🚫 İşlem iptal edildi.", reply_markup=get_main_keyboard())
+        return
+
+    # Check Current State
+    current_state = user_states.get(user_id, STATE_NONE)
+
+    if current_state == STATE_WAITING_MARQUEE:
+        # Process New Marquee Message
+        data = load_data()
+        data['messages'] = [text]
+        if save_data(data):
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Kayan yazı değiştirildi:\n📢 {text}", reply_markup=get_main_keyboard())
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Hata oluştu.", reply_markup=get_main_keyboard())
+        user_states[user_id] = STATE_NONE
+        return
+
+    elif current_state == STATE_WAITING_MARQUEE_ADD:
+        data = load_data()
+        if 'messages' not in data: data['messages'] = []
+        data['messages'].append(text)
+        if save_data(data):
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Kayan yazıya eklendi.\n📢 {text}", reply_markup=get_main_keyboard())
+        user_states[user_id] = STATE_NONE
+        return
+
+    elif current_state == STATE_WAITING_QUOTE:
+        data = load_data()
+        data['quotes'] = [text]
+        save_data(data)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Günün sözü değiştirildi:\n💬 {text}", reply_markup=get_main_keyboard())
+        user_states[user_id] = STATE_NONE
+        return
+
+    elif current_state == STATE_WAITING_QUOTE_ADD:
+        data = load_data()
+        if 'quotes' not in data: data['quotes'] = []
+        data['quotes'].append(text)
+        save_data(data)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Söz eklendi:\n💬 {text}", reply_markup=get_main_keyboard())
+        user_states[user_id] = STATE_NONE
+        return
+
+    # Handle Helper Buttons (Commands)
+    if text == "📜 Kayan Yazıyı Değiştir":
+        user_states[user_id] = STATE_WAITING_MARQUEE
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="✏️ Lütfen yeni kayan yazıyı gönderin:\n(İptal için 'iptal' yazın)")
+        return
+    
+    elif text == "➕ Kayan Yazıya Ekle":
+        user_states[user_id] = STATE_WAITING_MARQUEE_ADD
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="📝 Lütfen eklenecek yazıyı gönderin:\n(İptal için 'iptal' yazın)")
+        return
+
+    elif text == "📢 Günün Sözünü Değiştir":
+        user_states[user_id] = STATE_WAITING_QUOTE
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="💬 Lütfen yeni günün sözünü gönderin:\n(İptal için 'iptal' yazın)")
+        return
+    
+    elif text == "➕ Günün Sözü Ekle":
+        user_states[user_id] = STATE_WAITING_QUOTE_ADD
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="➕ Lütfen eklenecek sözü gönderin:\n(İptal için 'iptal' yazın)")
+        return
+    
+    elif text == "📖 Kayan Yazıyı Göster":
+        await mesajlar_command(update, context)
+        return
+
+    elif text == "📖 Günün Sözünü Göster":
+        await sozler_command(update, context)
+        return
+
+    elif text == "📊 Durum":
+        await durum_command(update, context)
+        return
+    
+    elif text == "🆔 Telegram ID'niz":
+        await id_command(update, context)
+        return
+
+    elif text == "❓ Bilmece/Soru Yükle":
+        user_states[user_id] = STATE_WAITING_RIDDLE
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="📸 Lütfen bilmece/soru fotoğrafını veya videosunu gönderin:\n(İptal için 'iptal' yazın)")
+        return
+
+    # Unknown Text
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="❓ Menüden bir işlem seçin veya komut gönderin.",
+        reply_markup=get_main_keyboard()
+    )
+
+
+# --- Post Init (Command Menu) ---
+
+async def post_init(application):
+    commands = [
+        ("giris", "Giriş yap"),
+        ("id", "Telegram ID'nizi göster")
+    ]
+    await application.bot.set_my_commands(commands)
 
 # --- Main ---
 
@@ -473,31 +416,25 @@ def main():
         print("Lütfen config.py veya .env dosyasındaki BOT_TOKEN ve ADMIN_IDS alanlarını düzenleyin.")
         return
         
-    builder = ApplicationBuilder().token(config.BOT_TOKEN)
+    builder = ApplicationBuilder().token(config.BOT_TOKEN).post_init(post_init)
     
     # Custom Network Configuration
     if config.BOT_API_URL:
         builder.base_url(config.BOT_API_URL)
-        print(f"Özel API URL kullanılıyor: {config.BOT_API_URL}")
 
     # SSL Verification Handling
     if not config.BOT_SSL_VERIFY:
         try:
             from telegram.request import HTTPXRequest
-            
             class InsecureHTTPXRequest(HTTPXRequest):
                 def __init__(self, *args, **kwargs):
                     super().__init__(*args, **kwargs)
-                
                 def _create_client(self, **kwargs):
                     kwargs["verify"] = False
                     return super()._create_client(**kwargs)
-
-            request_instance = InsecureHTTPXRequest()
-            builder.request(request_instance)
-            print("⚠️ UYARI: SSL Sertifika doğrulaması devre dışı bırakıldı (Okul Ağı Modu).")
+            builder.request(InsecureHTTPXRequest())
         except ImportError:
-            print("HATA: HTTPXRequest import edilemedi. SSL ayarı yapılamadı.")
+            pass
 
     application = builder.build()
     
@@ -509,17 +446,14 @@ def main():
     application.add_handler(CommandHandler('mesajekle', mesaj_ekle_command))
     application.add_handler(CommandHandler('mesajlar', mesajlar_command))
     application.add_handler(CommandHandler('mesajsil', mesaj_sil_command))
-    application.add_handler(CommandHandler('okul', okul_command))
-    application.add_handler(CommandHandler('gerisayim', gerisayim_command))
+    application.add_handler(CommandHandler('soz', soz_command))
+    application.add_handler(CommandHandler('sozekle', sozekle_command))
+    application.add_handler(CommandHandler('sozler', sozler_command))
+    application.add_handler(CommandHandler('sozsil', sozsil_command))
     application.add_handler(CommandHandler('durum', durum_command))
     
-    # Media handler (photos, videos, documents)
-    application.add_handler(MessageHandler(
-        filters.PHOTO | filters.VIDEO | filters.Document.IMAGE | filters.Document.VIDEO, 
-        handle_document
-    ))
-    
-    # Text handler (show menu for any non-command text)
+    # Media & Text Handlers
+    application.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.Document.IMAGE | filters.Document.VIDEO, handle_document))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text))
     
     print(f"Bot çalışıyor (Admin IDs: {config.ADMIN_IDS})...")

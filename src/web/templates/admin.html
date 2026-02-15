@@ -185,11 +185,11 @@
             <div class="nav-item" onclick="switchTab('tab-duty')"><span class="nav-icon">👮</span> Nöbetçi Öğretmenler</div>
             <div class="nav-item" onclick="switchTab('tab-schedule')"><span class="nav-icon">📅</span> Ders Saatleri</div>
             <div class="nav-item" onclick="switchTab('tab-classes')"><span class="nav-icon">📚</span> Sınıf Programları</div>
-            <div class="nav-item" onclick="switchTab('tab-slideshow')"><span class="nav-icon">📽️</span> Slayt Ayarları</div>
+            <div class="nav-item" onclick="switchTab('tab-slideshow')"><span class="nav-icon">📽️</span> Slayt Yönetimi</div>
             <div class="nav-item" onclick="switchTab('tab-marquee')"><span class="nav-icon">📜</span> Kayan Yazı</div>
+            <div class="nav-item" onclick="switchTab('tab-quotes')"><span class="nav-icon">📢</span> Günün Sözü</div>
             <div class="nav-item" onclick="switchTab('tab-countdown')"><span class="nav-icon">⏳</span> Geri Sayım</div>
-            <div class="nav-item" onclick="switchTab('tab-messages')"><span class="nav-icon">📢</span> Mesajlar</div>
-            <div class="nav-item" onclick="switchTab('tab-slides')"><span class="nav-icon">🖼️</span> Slayt Yönetimi</div>
+            <!-- Slide Management tab merged into Slayt Yönetimi -->
             <div class="nav-item" onclick="switchTab('tab-system')"><span class="nav-icon">🖥️</span> Sistem</div>
         </nav>
 
@@ -227,6 +227,7 @@
 
             <!-- ==================== TAB: Okul Bilgileri ==================== -->
             <div class="tab-panel" id="tab-school">
+                <!-- Okul Bilgileri Kartı -->
                 <div class="card">
                     <h2>🏫 Okul Bilgileri</h2>
                     <div class="row">
@@ -234,12 +235,6 @@
                             <label>Okul Adı</label>
                             <input type="text" name="school_name" value="{{ data.school_name }}">
                         </div>
-                        <div class="col">
-                            <label>Bot Giriş Şifresi</label>
-                            <input type="text" name="bot_access_code" value="{{ data.get('bot_access_code', 'okulpanosu') }}" placeholder="okulpanosu">
-                        </div>
-                    </div>
-                    <div class="row">
                         <div class="col">
                             <label>Logo URL (veya Dosya Yükle)</label>
                             <div style="display: flex; gap: 5px;">
@@ -254,6 +249,41 @@
                         <option value="low" {% if data.performance_mode == 'low' %}selected{% endif %}>Düşük (Statik & Hızlı)</option>
                     </select>
                     <small style="color: #666;">Eğer panoda donma olursa "Düşük" seçiniz.</small>
+                </div>
+
+                <!-- Telegram Ayarları Kartı -->
+                <div class="card" style="border-top: 4px solid #3498db;">
+                    <h2>🤖 Telegram Bot Ayarları</h2>
+                    <p style="color: #666; margin-bottom: 15px;">Botun çalışması için gerekli bağlantı ayarları.</p>
+                    
+                    <div class="row">
+                        <div class="col">
+                            <label>Bot Giriş Şifresi (Erişim Kodu)</label>
+                            <input type="text" name="bot_access_code" value="{{ env_data.bot_access_code }}" placeholder="okulpanosu">
+                            <small style="color: #666;">Öğretmenlerin bota giriş yaparken kullanacağı şifre.</small>
+                        </div>
+                        <div class="col">
+                             <label>Admin ID'leri (Virgül ile ayırın)</label>
+                            <input type="text" name="admin_ids" value="{{ env_data.admin_ids }}" placeholder="12345678, 87654321">
+                            <small style="color: #666;">Bu ID'ye sahip kullanıcılar botta yönetici olur.</small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col">
+                            <label>Telegram Bot Token</label>
+                            <input type="text" name="bot_token" value="{{ env_data.bot_token }}" placeholder="123456:ABC-DEF..." style="font-family: monospace; background: #f8f9fa;">
+                            <small style="color: #e74c3c;">⚠️ Dikkat: Bu alanı değiştirdiğinizde programı yeniden başlatmanız gerekir.</small>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #856404; font-weight: bold;">
+                            <input type="checkbox" name="bot_ssl_verify" {% if env_data.bot_ssl_verify %}checked{% endif %} style="margin: 0; width: auto;">
+                            <span>SSL Sertifika Kontrolünü Aç (Önerilen)</span>
+                        </label>
+                        <small style="display: block; margin-top: 5px; color: #856404;">Not: Okul ağında (MEB Hattı) bot çalışmıyorsa bu tiki kaldırın.</small>
+                    </div>
                 </div>
             </div>
 
@@ -470,6 +500,25 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Slides Management Card Merged Here -->
+                <div class="card" style="margin-top: 20px; border-top: 4px solid #e67e22;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <h2 style="margin: 0;">🖼️ Yüklü Slaytlar</h2>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="slide-sort" onchange="loadSlides()" style="padding: 6px; font-size: 0.9rem; border: 1px solid #ddd; border-radius: 4px; margin: 0;">
+                                <option value="newest">En Yeni (Önce)</option>
+                                <option value="oldest">En Eski (Önce)</option>
+                                <option value="name_asc">İsim (A-Z)</option>
+                                <option value="name_desc">İsim (Z-A)</option>
+                                <option value="type">Tür (Resim/Video)</option>
+                            </select>
+                            <button type="button" onclick="openSlidesFolder()" style="background: #e67e22; padding: 6px 12px; font-size: 0.9rem;">📂 Klasörü Aç</button>
+                        </div>
+                    </div>
+                    <p style="color: #666; margin-top: 10px;">Yüklenmiş slaytları buradan yönetebilirsiniz. Sıralamak için listeyi kullanın.</p>
+                    <div id="slides-grid" class="slide-grid"><p>Yükleniyor...</p></div>
+                </div>
             </div>
 
             <!-- ==================== TAB: Kayan Yazı ==================== -->
@@ -502,41 +551,32 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                    
+                    <h3>Kayan Yazı İçeriği</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Alt alta yazılan her satır, kayan yazıda aralarında boşluk bırakılarak döner.</p>
+                    <textarea name="messages" style="height: 150px; font-family: monospace;">{{ data.messages | join('\n') }}</textarea>
+                </div>
+            </div>
+
+            <!-- ==================== TAB: Günün Sözü ==================== -->
+            <div class="tab-panel" id="tab-quotes">
+                <div class="card">
+                    <h2>📢 Günün Sözü</h2>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Her satıra bir söz yazın. Panoda rastgele biri gösterilir.</p>
+                    <textarea name="quotes" style="height: 200px; font-family: monospace;">{{ data.quotes | join('\n') }}</textarea>
                 </div>
             </div>
 
             <!-- ==================== TAB: Geri Sayım ==================== -->
             <div class="tab-panel" id="tab-countdown">
-                <div class="card">
+                 <div class="card">
                     <h2>⏳ Geri Sayım</h2>
-                    <div class="row">
-                        <div class="col">
-                            <label>Etkinlik Adı (örn: YKS'ye Kalan)</label>
-                            <input type="text" name="countdown_label" value="{{ data.countdown.label }}">
-                        </div>
-                        <div class="col">
-                            <label>Hedef Tarih</label>
-                            <input type="datetime-local" name="countdown_date" value="{{ data.countdown.target_date }}">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ==================== TAB: Mesajlar ==================== -->
-            <div class="tab-panel" id="tab-messages">
-                <div class="card">
-                    <h2>📢 Günün Sözleri / Mesajlar</h2>
-                    <label>Her satıra bir mesaj yazın:</label>
-                    <textarea name="messages" style="height: 200px;">{{ data.messages | join('\n') }}</textarea>
-                </div>
-            </div>
-
-            <!-- ==================== TAB: Slayt Yönetimi ==================== -->
-            <div class="tab-panel" id="tab-slides">
-                <div class="card">
-                    <h2>🖼️ Slayt Yönetimi</h2>
-                    <p style="color: #666;">Yüklenmiş slaytları görüntüleyin ve silin.</p>
-                    <div id="slides-grid" class="slide-grid"><p>Yükleniyor...</p></div>
+                    <label>Etiket (Örn: YKS'ye Kalan)</label>
+                    <input type="text" name="countdown_label" value="{{ data.countdown.label if data.countdown else '' }}">
+                    <label>Hedef Tarih ve Saat</label>
+                    <input type="datetime-local" name="countdown_date" value="{{ data.countdown.target_date if data.countdown else '' }}">
                 </div>
             </div>
 
@@ -545,7 +585,6 @@
                 <div class="card" style="border: 2px solid #3498db;">
                     <h2>🖥️ Sistem ve Başlangıç</h2>
                     <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-                        <button type="button" onclick="openSlidesFolder()" style="background: #e67e22;">📂 Slayt Klasörünü Aç</button>
                         <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                             <input type="checkbox" id="autostart_checkbox" onchange="toggleAutostart(this)" style="margin: 0;">
                             <span>Windows Başlangıcında Otomatik Çalıştır</span>
@@ -687,21 +726,63 @@
         }
 
         // ===== Slides Management =====
+        let allSlides = []; // Store slides globally for sorting
+
         async function loadSlides() {
             try {
+                // Fetch only if empty, otherwise use cached unless explicitly reloaded? 
+                // Actually always fetch to get updates, but store in global for client-side sort
                 const res = await fetch('/api/get_slides_with_info');
-                const slides = await res.json();
-                const grid = document.getElementById('slides-grid');
-                grid.innerHTML = '';
-                if (slides.length === 0) { grid.innerHTML = '<p>Hiç slayt bulunamadı.</p>'; return; }
-                slides.forEach(slide => {
-                    const div = document.createElement('div');
-                    div.className = 'slide-item';
-                    let media = slide.type === 'image' ? `<img src="${slide.url}" alt="${slide.name}" loading="lazy">` : `<video src="${slide.url}" muted></video>`;
-                    div.innerHTML = `${media}<div class="info">${slide.size}</div><button type="button" onclick="deleteSlide('${slide.name}', this)">Sil</button>`;
-                    grid.appendChild(div);
-                });
+                allSlides = await res.json();
+                renderSlides();
             } catch(e) { console.error(e); }
+        }
+
+        function renderSlides() {
+            const grid = document.getElementById('slides-grid');
+            const sortMode = document.getElementById('slide-sort').value;
+            
+            // Sort Logic
+            let slides = [...allSlides];
+            if (sortMode === 'newest') {
+                slides.sort((a, b) => b.timestamp - a.timestamp);
+            } else if (sortMode === 'oldest') {
+                slides.sort((a, b) => a.timestamp - b.timestamp);
+            } else if (sortMode === 'name_asc') {
+                slides.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (sortMode === 'name_desc') {
+                slides.sort((a, b) => b.name.localeCompare(a.name));
+            } else if (sortMode === 'type') {
+                slides.sort((a, b) => a.type.localeCompare(b.type));
+            }
+
+            grid.innerHTML = '';
+            if (slides.length === 0) { grid.innerHTML = '<p>Hiç slayt bulunamadı.</p>'; return; }
+            
+            slides.forEach(slide => {
+                const div = document.createElement('div');
+                div.className = 'slide-item';
+                div.style.position = 'relative';
+                
+                // Icon for type
+                const typeIcon = slide.type === 'video' ? '🎬' : '📷';
+                const typeBadge = `<span style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${typeIcon}</span>`;
+                
+                let media = slide.type === 'image' 
+                    ? `<img src="${slide.url}" alt="${slide.name}" loading="lazy" title="Yüklenme Tarihi: ${slide.date_str}">` 
+                    : `<video src="${slide.url}" muted title="Yüklenme Tarihi: ${slide.date_str}"></video>`;
+                
+                div.innerHTML = `
+                    ${typeBadge}
+                    ${media}
+                    <div class="info" style="display: flex; flex-direction: column; gap: 2px;">
+                        <span style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">${slide.name}</span>
+                        <span style="font-size: 0.75rem; color: #888;">${slide.size} - ${slide.date_str}</span>
+                    </div>
+                    <button type="button" onclick="deleteSlide('${slide.name}', this)">Sil</button>
+                `;
+                grid.appendChild(div);
+            });
         }
 
         async function deleteSlide(filename, btn) {
@@ -710,7 +791,11 @@
             try {
                 const res = await fetch('/api/delete_slide', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({filename: filename}) });
                 const data = await res.json();
-                if (data.status === 'success') btn.closest('.slide-item').remove();
+                if (data.status === 'success') {
+                    // Update global list and re-render
+                    allSlides = allSlides.filter(s => s.name !== filename);
+                    renderSlides();
+                }
                 else { alert('Hata: ' + data.message); btn.textContent = 'Sil'; }
             } catch(e) { alert('Bağlantı hatası'); btn.textContent = 'Sil'; }
         }

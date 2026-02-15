@@ -41,6 +41,7 @@ WEB_STATIC_DIR = os.path.join(RESOURCE_DIR, 'src', 'web', 'static')
 WEB_TEMPLATE_DIR = os.path.join(RESOURCE_DIR, 'src', 'web', 'templates')
 
 SLIDESHOW_DIR = os.path.join(WEB_STATIC_DIR, 'slideshow')
+RIDDLES_DIR = os.path.join(WEB_STATIC_DIR, 'riddles')
 
 # Network Configuration
 WEB_PORT = int(os.getenv("WEB_PORT", 7000))
@@ -66,4 +67,47 @@ BOT_SSL_VERIFY = os.getenv("BOT_SSL_VERIFY", "True").lower() in ("true", "1", "y
 
 # Ensure directories exist
 os.makedirs(SLIDESHOW_DIR, exist_ok=True)
-os.makedirs(DATA_DIR, exist_ok=True)
+
+def update_env_file(updates):
+    """
+    Updates the .env file with the given key-value pairs.
+    Preserves comments and structure.
+    """
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    if not os.path.exists(env_path):
+        # Create if not exists
+        with open(env_path, 'w', encoding='utf-8') as f:
+            for k, v in updates.items():
+                f.write(f"{k}={v}\n")
+        return
+
+    # Read existing lines
+    with open(env_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    new_lines = []
+    keys_updated = set()
+
+    for line in lines:
+        stripped = line.strip()
+        # Check if line is a key assignment (and not a comment)
+        if stripped and not stripped.startswith('#') and '=' in stripped:
+            key = stripped.split('=', 1)[0].strip()
+            if key in updates:
+                new_lines.append(f"{key}={updates[key]}\n")
+                keys_updated.add(key)
+            else:
+                new_lines.append(line)
+        else:
+            new_lines.append(line)
+
+    # Append new keys that weren't in the file
+    for k, v in updates.items():
+        if k not in keys_updated:
+            if new_lines and not new_lines[-1].endswith('\n'):
+                new_lines.append('\n')
+            new_lines.append(f"{k}={v}\n")
+
+    # Write back
+    with open(env_path, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)

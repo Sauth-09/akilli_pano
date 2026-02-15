@@ -1,74 +1,23 @@
 {
-    "duty_roster": [
-        {
-            "location": "bahçe",
-            "schedule": {
-                "Monday": "",
-                "Tuesday": "",
-                "Wednesday": "",
-                "Thursday": "",
-                "Friday": "sadullah"
-            }
-        },
-        {
-            "location": "bina",
-            "schedule": {
-                "Monday": "",
-                "Tuesday": "",
-                "Wednesday": "",
-                "Thursday": "",
-                "Friday": "bina öğretmen"
-            }
-        }
-    ],
+    "duty_roster": [],
     "class_schedules": [
         {
             "name": "9-A",
             "program": {
                 "Monday": [
-                    "MAT",
-                    "MAT"
+                    "Matematik"
                 ],
                 "Tuesday": [
-                    "KMY",
-                    "TRH"
+                    "Beden"
                 ],
                 "Wednesday": [
-                    "EDB",
-                    "MAT"
+                    ""
                 ],
                 "Thursday": [
-                    "FZK",
-                    "KMY"
+                    ""
                 ],
                 "Friday": [
-                    "MAT",
-                    "DENEME"
-                ]
-            }
-        },
-        {
-            "name": "12-A",
-            "program": {
-                "Monday": [
-                    "MAT",
-                    "MAT"
-                ],
-                "Tuesday": [
-                    "KMY",
-                    "TRH"
-                ],
-                "Wednesday": [
-                    "EDB",
-                    "MAT"
-                ],
-                "Thursday": [
-                    "FZK",
-                    "KMY"
-                ],
-                "Friday": [
-                    "MAT",
-                    "DENEME"
+                    ""
                 ]
             }
         }
@@ -81,25 +30,26 @@
         {
             "name": "doğum ahme dd",
             "date": "14.02.2000"
+        },
+        {
+            "name": "ss aa",
+            "date": "15.02.2000"
         }
     ],
-    "messages": [
-        "Başarılar dileriz!",
-        "Kitap okumayı unutmayın.",
-        "Temizlik imandan gelir."
-    ],
-    "school_name": "Akçaköy İlk-Ortaokulu",
-    "logo_url": "/static/img/school_logo.jpeg",
+    "messages": [],
+    "quotes": [],
+    "school_name": "Test Okul",
+    "logo_url": "/static/img/school_logo.ico",
     "slideshow": {
-        "duration": 3000,
+        "duration": 10000,
         "transition": "random",
-        "order": "newest",
+        "order": "random",
         "fit_mode": "contain"
     },
     "performance_mode": "high",
     "countdown": {
-        "label": "YKS'ye Kalan",
-        "target_date": "2026-06-15T10:00"
+        "label": "Lgs",
+        "target_date": "2026-06-16T09:30"
     },
     "layout": [
         {
@@ -107,12 +57,6 @@
             "title": "Durum",
             "visible": true,
             "type": "status"
-        },
-        {
-            "id": "card-duty",
-            "title": "Nöbetçi Öğretmenler",
-            "visible": true,
-            "type": "duty"
         },
         {
             "id": "card-quote",
@@ -127,6 +71,12 @@
             "type": "countdown"
         },
         {
+            "id": "card-duty",
+            "title": "Nöbetçi Öğretmenler",
+            "visible": true,
+            "type": "duty"
+        },
+        {
             "id": "card-birthdays",
             "title": "Doğum Günleri",
             "visible": true,
@@ -137,54 +87,29 @@
             "title": "Sınıf Durumları",
             "visible": true,
             "type": "classes"
+        },
+        {
+            "id": "card-riddle",
+            "title": "Bilmece/Soru",
+            "visible": true,
+            "type": "riddle"
         }
     ],
     "schedule": [
         {
             "name": "1. Ders",
-            "start": "08:30",
-            "end": "09:10"
-        },
-        {
-            "name": "2. Ders",
-            "start": "09:25",
-            "end": "10:05"
-        },
-        {
-            "name": "3. Ders",
-            "start": "10:20",
-            "end": "11:00"
-        },
-        {
-            "name": "4. Ders",
-            "start": "11:15",
-            "end": "11:55"
-        },
-        {
-            "name": "5. Ders",
-            "start": "12:10",
-            "end": "12:50"
-        },
-        {
-            "name": "Öğle Arası",
-            "start": "12:50",
-            "end": "13:30"
-        },
-        {
-            "name": "6. Ders",
-            "start": "13:30",
-            "end": "14:10"
-        },
-        {
-            "name": "7. Ders",
-            "start": "14:25",
-            "end": "15:05"
+            "start": "09:10",
+            "end": "09:50"
         }
     ],
     "marquee": {
-        "font_size": "3.5",
-        "duration": "11",
+        "font_size": "1.2",
+        "duration": "30",
         "color": "#2c3e50",
         "font_family": "'Roboto', sans-serif"
+    },
+    "bot_access_code": "okulpanosu",
+    "duty_rotation": {
+        "auto_rotate": false
     }
 }
