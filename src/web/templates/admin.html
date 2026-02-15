@@ -419,7 +419,7 @@
                             </div>
                             <!-- Schedule Cards -->
                             <div class="sg-cards" style="display: flex; flex-wrap: wrap; gap: 10px;">
-                                {% for item in group.items %}
+                                {% for item in group.get('items', []) %}
                                 <div class="schedule-card" style="background: white; border: 1px solid #ddd; padding: 12px; border-radius: 8px; width: 180px;">
                                     <label style="font-size: 0.8rem;">Ders/Etkinlik</label>
                                     <input type="text" name="sg_name_{{ group_idx }}[]" value="{{ item.name }}" required style="font-size: 0.9rem;">

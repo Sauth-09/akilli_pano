@@ -19,12 +19,17 @@ if getattr(sys, 'frozen', False):
     # In onedir mode: sys._MEIPASS is not always set, usually resources are relative to exe in `_internal` or root.
     # However, PyInstaller sets sys._MEIPASS even for onedir in recent versions for consistency if using --onedir
     # Let's check if _MEIPASS exists, otherwise fall back to executable dir.
+    # Try to locate resources in _MEIPASS (PyInstaller internal dir)
     if hasattr(sys, '_MEIPASS'):
-        RESOURCE_DIR = sys._MEIPASS
+        # Check if src exists there (it should for onedir with _internal)
+        potential_path = os.path.join(sys._MEIPASS, 'src')
+        if os.path.exists(potential_path):
+            RESOURCE_DIR = sys._MEIPASS
+        else:
+            # Fallback to executable dir (root of dist)
+            RESOURCE_DIR = os.path.dirname(sys.executable)
     else:
-        # For onedir without _MEIPASS (older versions or specific configs), resources are usually in . (root of dist) or _internal
-        # Our spec says: datas=[('src/web/templates', 'src/web/templates')]
-        # This puts them in `dist/AkilliPano/src/web/templates`
+        # Fallback to executable dir
         RESOURCE_DIR = os.path.dirname(sys.executable)
         
 else:

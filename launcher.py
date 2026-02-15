@@ -80,7 +80,7 @@ def launch_kiosk():
             try:
                 subprocess.Popen([
                     chrome_exe,
-                    "--kiosk",
+                    "--start-fullscreen",
                     "--incognito",
                     "--disable-infobars",
                     "--no-first-run",
