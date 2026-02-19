@@ -32,6 +32,7 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
+
 [Files]
 Source: "{#ProjectDir}\dist\AkilliPano\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#ProjectDir}\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -44,3 +45,31 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+
+[Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "AkilliPano"; Flags: uninsdeletevalue
+
+[UninstallDelete]
+; Remove autostart entries
+Type: files; Name: "{userstartup}\AkilliPano.bat"
+Type: files; Name: "{userstartup}\AkilliPano.lnk"
+
+; Remove logs
+Type: files; Name: "{app}\launcher.log"
+Type: files; Name: "{app}\launcher.log.*"
+
+; Remove data files (user generated)
+Type: files; Name: "{app}\data\*.json"
+Type: files; Name: "{app}\data\*"
+Type: dirifempty; Name: "{app}\data"
+
+; Remove uploaded/generated static content
+Type: files; Name: "{app}\src\web\static\slideshow\*"
+Type: dirifempty; Name: "{app}\src\web\static\slideshow"
+Type: files; Name: "{app}\src\web\static\riddles\*"
+Type: dirifempty; Name: "{app}\src\web\static\riddles"
+Type: files; Name: "{app}\src\web\static\img\school_logo.*"
+
+; Attempt to remove the application directory if empty (after improved cleanup)
+; Attempt to remove the application directory and all contents (force cleanup)
+Type: filesandordirs; Name: "{app}"

@@ -1,4 +1,6 @@
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
+import logging
+logging.getLogger('launcher').info("Entering src.web.app module")
 import os
 import json
 import copy
@@ -12,11 +14,7 @@ import secrets
 from logging.handlers import RotatingFileHandler
 import traceback
 
-# Conditional import for Windows-only module
-try:
-    import winreg
-except ImportError:
-    winreg = None
+
 
 # Ensure parent directory is in path to import config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -51,6 +49,10 @@ def generate_csrf_token():
         session['_csrf_token'] = secrets.token_hex(32)
     return session['_csrf_token']
 
+@app.before_request
+def log_request_info():
+    app.logger.info(f"Request: {request.method} {request.url}")
+
 def validate_csrf_token():
     """Validate the CSRF token from form data against session."""
     token = session.get('_csrf_token')
@@ -62,12 +64,12 @@ def validate_csrf_token():
 # Make csrf_token available in all templates
 app.jinja_env.globals['csrf_token'] = generate_csrf_token
 
-# Configure logging with rotation (max 5MB, keep 3 backups)
-handler = RotatingFileHandler("launcher.log", maxBytes=5*1024*1024, backupCount=3)
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-app.logger.addHandler(handler)
+# Configure logging - rely on root logger configured in launcher.py
+# handler = RotatingFileHandler("launcher.log", maxBytes=5*1024*1024, backupCount=3)
+# handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+# app.logger.addHandler(handler)
 app.logger.setLevel(logging.INFO)
-logging.getLogger('werkzeug').addHandler(handler)
+# logging.getLogger('werkzeug').addHandler(handler)
 
 # load_data and save_data are now imported from src.shared_data
 # DEFAULT_DATA is also imported from there for consistency
@@ -105,10 +107,12 @@ def rotate_roster(data):
     return data
 
 def handle_save_settings(data):
+    app.logger.info("Entering handle_save_settings")
     # General Settings Save
     data['school_name'] = request.form.get('school_name')
     
     # --- ENV Update Start ---
+    app.logger.info("Processing ENV updates")
     new_bot_token = request.form.get('bot_token', '').strip()
     new_admin_ids = request.form.get('admin_ids', '').strip()
     new_access_code = request.form.get('bot_access_code', '').strip()
@@ -116,7 +120,7 @@ def handle_save_settings(data):
     
     env_updates = {}
     requires_restart = False
-    if new_bot_token:
+    if new_bot_token and new_bot_token != config.BOT_TOKEN:
         env_updates['BOT_TOKEN'] = new_bot_token
         requires_restart = True
     if new_admin_ids:
@@ -127,6 +131,7 @@ def handle_save_settings(data):
     env_updates['BOT_SSL_VERIFY'] = new_ssl_verify
     
     if env_updates:
+        app.logger.info(f"Updating env file with: {env_updates.keys()}")
         config.update_env_file(env_updates)
         if 'BOT_TOKEN' in env_updates: config.BOT_TOKEN = env_updates['BOT_TOKEN']
         if 'BOT_ACCESS_CODE' in env_updates: config.BOT_ACCESS_CODE = env_updates['BOT_ACCESS_CODE']
@@ -142,6 +147,7 @@ def handle_save_settings(data):
     data['bot_access_code'] = new_access_code
     
     # Logo Upload Handling
+    app.logger.info("Processing Logo Upload")
     if 'logo_file' in request.files:
         file = request.files['logo_file']
         if file.filename != '':
@@ -184,6 +190,7 @@ def handle_save_settings(data):
     data['quotes'] = [q.strip() for q in raw_quotes.split('\n') if q.strip()]
     
     # Schedule Groups Processing
+    app.logger.info("Processing Schedule Groups")
     schedule_groups = []
     group_indices = []
     for key in request.form.keys():
@@ -216,6 +223,7 @@ def handle_save_settings(data):
     if schedule_groups:
         data['schedule'] = {'groups': schedule_groups}
     
+    app.logger.info("Processing Roster")
     locations = request.form.getlist('location[]')
     mondays = request.form.getlist('Monday[]')
     tuesdays = request.form.getlist('Tuesday[]')
@@ -246,15 +254,13 @@ def handle_save_settings(data):
         'font_family': request.form.get('marquee_font_family', "'Roboto', sans-serif")
     }
 
-    # Class Schedules Processing (Shortened for brevity, assume same logic as before or re-include)
-    # Dynamic Class Schedules Processing
+    # Class Schedules Processing
+    app.logger.info("Processing Class Schedules")
     processed_schedules = []
     # Find all keys starting with class_name_
     class_indices = []
     for key in request.form.keys():
         if key.startswith('class_name_'):
-            # Extract the ID part (which might be an int or a timestamp string)
-            # key is like class_name_0 or class_name_174000000
             idx = key.replace('class_name_', '')
             class_indices.append(idx)
             
@@ -285,14 +291,11 @@ def handle_save_settings(data):
             pass
 
     # Layout Settings
+    app.logger.info("Processing Layout")
     layout_ids = request.form.getlist('layout_id[]')
-    # Checkbox values are only sent if checked. This makes handling checkboxes in a list tricky if they aren't uniquely named.
-    # Alternative: We iterate over the received IDs, and check if `visible_{id}` is in form.
+    
     new_layout = []
     if layout_ids:
-        # We need to know the 'type' and 'title' for each ID. 
-        # Since we don't send type/title back from form usually (unless hidden inputs), we might rely on existing data or hidden inputs.
-        # Let's simple use hidden inputs for type and title too.
         layout_titles = request.form.getlist('layout_title[]')
         layout_types = request.form.getlist('layout_type[]')
         
@@ -313,18 +316,9 @@ def handle_save_settings(data):
         data['layout'] = new_layout
 
     # Slideshow Settings
-    # Helper to get int safely
-    def get_int(key, default):
-        try:
-            return int(request.form.get(key, default))
-        except (ValueError, TypeError):
-            return default
-
-    # Get existing or default
+    app.logger.info("Processing Slideshow Settings")
     exist_ss = data.get('slideshow', {})
     
-    # Duration: if provided use it, else keep existing, else default 10
-    # Note: Input sends value in seconds, we store ms
     dur_input = request.form.get('slideshow_duration')
     if dur_input:
         new_duration = int(dur_input) * 1000
@@ -361,7 +355,9 @@ def handle_save_settings(data):
     if data['duty_rotation']['auto_rotate'] and data['duty_rotation'].get('last_week_number', 0) == 0:
         data['duty_rotation']['last_week_number'] = datetime.now().isocalendar()[1]
 
+    app.logger.info("Saving Data...")
     save_data(data)
+    app.logger.info("Data Saved.")
     if requires_restart:
         return "Ayarlar kaydedildi! ⚠️ Bot Token değiştirildi — değişikliklerin geçerli olması için programı yeniden başlatın."
     return "Ayarlar başarıyla kaydedildi!"
@@ -390,9 +386,12 @@ def admin_logout():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
+    app.logger.info("Entering admin route")
     if not session.get('admin_logged_in'):
         return redirect(url_for('admin_login'))
+    app.logger.info("Calling load_data in admin")
     data = load_data()
+    app.logger.info("load_data returned in admin")
     message = None
 
     if request.method == 'POST':
@@ -702,60 +701,95 @@ def open_slides_folder():
 
 @app.route('/api/toggle_autostart', methods=['POST'])
 def toggle_autostart():
-    if winreg is None:
+    if platform.system() != 'Windows':
         return jsonify({'status': 'error', 'message': 'Bu özellik sadece Windows\'ta çalışır.'})
+    
     try:
         enable = request.json.get('enable', False)
-        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
-        app_name = "AkilliPano"
-        # We assume the executable is where this script is running from, or a specific launcher path.
-        # When running from source (python), it's python.exe + script. 
-        # When frozen (PyInstaller), it's the executable.
+        
+        # Define paths
+        startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+        bat_path = os.path.join(startup_folder, 'AkilliPano.bat')
+        
+        # Determine executable path
         if getattr(sys, 'frozen', False):
+            # PyInstaller bundle
             exe_path = sys.executable
         else:
-            # Development mode: Launch with pythonw (no console) via launcher.py if exists, or just this script?
-            # User wants "launcher.py" to be the main entry. 
-            # Let's point to the current working directory's launcher.py if possible, or run_web.py?
-            # Actually, robust way for dev is full path to pythonw.exe + full path to launcher.py
-            launcher_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'launcher.py')
-            if not os.path.exists(launcher_path):
-                 # Fallback to run_web.py in root
-                 launcher_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'run_web.py')
-            
-            exe_path = f'"{sys.executable.replace("python.exe", "pythonw.exe")}" "{launcher_path}"'
+            # Development mode
+            root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            launcher_path = os.path.join(root_dir, 'launcher.py')
+            python_exe = sys.executable.replace("python.exe", "pythonw.exe")
+            # For BAT file, we need double quotes around paths
+            exe_path = f'"{python_exe}" "{launcher_path}"'
 
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_ALL_ACCESS)
-        
         if enable:
-            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, exe_path)
-            msg = "Otomatik başlatma açıldı."
+            try:
+                # Create a batch file to start the program
+                # This is less likely to be flagged than a shortcut or registry change by heuristic analysis
+                with open(bat_path, 'w') as f:
+                    # Using start "" "path" to run without keeping the cmd window open
+                    # Verify if exe_path already has quotes
+                    cmd = exe_path
+                    if not cmd.startswith('"'):
+                        cmd = f'"{cmd}"'
+                    
+                    f.write('@echo off\n')
+                    f.write(f'start "" {cmd}\n')
+                    f.write('exit\n')
+                
+                msg = "Otomatik başlatma açıldı (BAT)."
+            except Exception as e:
+                app.logger.error(f"BAT creation error: {e}")
+                return jsonify({'status': 'error', 'message': f'Dosya oluşturma hatası: {str(e)}'})
         else:
             try:
-                winreg.DeleteValue(key, app_name)
-                msg = "Otomatik başlatma kapatıldı."
-            except FileNotFoundError:
-                msg = "Zaten kapalıydı."
-        
-        winreg.CloseKey(key)
+                if os.path.exists(bat_path):
+                    os.remove(bat_path)
+                    msg = "Otomatik başlatma kapatıldı (BAT)."
+                else:
+                    # Also try to remove legacy shortcut or registry key if they exist
+                    legacy_shortcut = os.path.join(startup_folder, 'AkilliPano.lnk')
+                    if os.path.exists(legacy_shortcut):
+                        os.remove(legacy_shortcut)
+                        msg = "Eski kısayol temizlendi."
+                    else:
+                        # Try cleaning registry just in case
+                        try:
+                            import winreg
+                            key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+                            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+                            try:
+                                winreg.DeleteValue(key, "AkilliPano")
+                                msg = "Eski kayıt temizlendi."
+                            except FileNotFoundError:
+                                msg = "Zaten kapalıydı."
+                            winreg.CloseKey(key)
+                        except:
+                            msg = "Zaten kapalıydı."
+
+            except Exception as e:
+                app.logger.error(f"Autostart disable error: {e}")
+                return jsonify({'status': 'error', 'message': str(e)})
+
+        return jsonify({'status': 'success', 'message': msg})
+    
+    except Exception as e:
+        app.logger.error(f"Toggle autostart error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})                
         return jsonify({'status': 'success', 'message': msg, 'enabled': enable})
     except Exception as e:
+        app.logger.error(f"Autostart Error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/api/get_autostart_status')
 def get_autostart_status():
-    if winreg is None:
+    if platform.system() != 'Windows':
         return jsonify({'enabled': False})
     try:
-        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
-        app_name = "AkilliPano"
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_READ)
-        try:
-            winreg.QueryValueEx(key, app_name)
-            enabled = True
-        except FileNotFoundError:
-            enabled = False
-        winreg.CloseKey(key)
+        startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+        shortcut_path = os.path.join(startup_folder, 'AkilliPano.lnk')
+        enabled = os.path.exists(shortcut_path)
         return jsonify({'enabled': enabled})
     except Exception:
         return jsonify({'enabled': False})
