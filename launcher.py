@@ -20,7 +20,8 @@ else:
 log_path = os.path.join(base_dir, "launcher.log")
 
 # Configure logging
-handlers = [logging.FileHandler(log_path)]
+from logging.handlers import RotatingFileHandler
+handlers = [RotatingFileHandler(log_path, maxBytes=5*1024*1024, backupCount=3)]
 if not getattr(sys, 'frozen', False):
     handlers.append(logging.StreamHandler())
 

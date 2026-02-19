@@ -52,6 +52,7 @@
             }
         }
     ],
+    "lesson_count": 8,
     "birthdays": [
         {
             "name": "doğum ahmet ee",
@@ -125,13 +126,27 @@
             "type": "riddle"
         }
     ],
-    "schedule": [
-        {
-            "name": "1. Ders",
-            "start": "09:10",
-            "end": "09:50"
-        }
-    ],
+    "schedule": {
+        "groups": [
+            {
+                "name": "Varsayılan",
+                "days": [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday"
+                ],
+                "items": [
+                    {
+                        "name": "1. Ders",
+                        "start": "09:10",
+                        "end": "09:50"
+                    }
+                ]
+            }
+        ]
+    },
     "marquee": {
         "font_size": "1.2",
         "duration": "30",

@@ -309,15 +309,16 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file = await update.message.video.get_file()
         ext = ".mp4"
     elif update.message.document:
-        mime = update.message.document.mime_type
+        doc = update.message.document
+        mime = doc.mime_type
         if mime and mime.startswith('image/'):
-            ext = ".jpg"
+            ext = os.path.splitext(doc.file_name)[1].lower() if doc.file_name else ".jpg"
         elif mime and mime.startswith('video/'):
-            ext = ".mp4"
+            ext = os.path.splitext(doc.file_name)[1].lower() if doc.file_name else ".mp4"
         else:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Sadece fotoğraf/video.")
             return
-        file = await update.message.document.get_file()
+        file = await doc.get_file()
     else:
         return
 
@@ -380,6 +381,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_data(data)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Söz eklendi:\n💬 {text}", reply_markup=get_main_keyboard())
         user_states[user_id] = STATE_NONE
+        return
+
+    elif current_state == STATE_WAITING_RIDDLE:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Lütfen yazı değil, bir fotoğraf veya video gönderin.\n(İşlemi iptal etmek için 'iptal' yazın)")
         return
 
     # Handle Helper Buttons (Commands)

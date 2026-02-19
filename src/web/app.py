@@ -65,11 +65,7 @@ def validate_csrf_token():
 app.jinja_env.globals['csrf_token'] = generate_csrf_token
 
 # Configure logging - rely on root logger configured in launcher.py
-# handler = RotatingFileHandler("launcher.log", maxBytes=5*1024*1024, backupCount=3)
-# handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-# app.logger.addHandler(handler)
 app.logger.setLevel(logging.INFO)
-# logging.getLogger('werkzeug').addHandler(handler)
 
 # load_data and save_data are now imported from src.shared_data
 # DEFAULT_DATA is also imported from there for consistency
@@ -776,10 +772,6 @@ def toggle_autostart():
     
     except Exception as e:
         app.logger.error(f"Toggle autostart error: {e}")
-        return jsonify({'status': 'error', 'message': str(e)})                
-        return jsonify({'status': 'success', 'message': msg, 'enabled': enable})
-    except Exception as e:
-        app.logger.error(f"Autostart Error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/api/get_autostart_status')

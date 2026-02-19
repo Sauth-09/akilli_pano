@@ -69,51 +69,62 @@ DEFAULT_DATA = {
 }
 
 
+
 def load_data():
     """Load data.json with thread safety and default merging."""
+    logger.info(f"Acquiring lock {id(_data_lock)} for load_data...")
     with _data_lock:
-        data = copy.deepcopy(DEFAULT_DATA)
-        if os.path.exists(config.DATA_FILE):
-            try:
-                with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
-                    loaded = json.load(f)
-                    for k, v in loaded.items():
-                        if isinstance(v, dict) and k in data and isinstance(data[k], dict):
-                            data[k].update(v)
-                        else:
-                            data[k] = v
-            except Exception as e:
-                logger.error(f"Error loading data.json: {e}")
+        logger.info("Lock acquired for load_data.")
+        try:
+            data = copy.deepcopy(DEFAULT_DATA)
+            if os.path.exists(config.DATA_FILE):
+                try:
+                    with open(config.DATA_FILE, 'r', encoding='utf-8') as f:
+                        loaded = json.load(f)
+                        for k, v in loaded.items():
+                            if isinstance(v, dict) and k in data and isinstance(data[k], dict):
+                                data[k].update(v)
+                            else:
+                                data[k] = v
+                except Exception as e:
+                    logger.error(f"Error loading data.json: {e}")
 
-        # Migration: Ensure new cards exist in layout
-        existing_ids = [item.get('id') for item in data.get('layout', [])]
-        if 'card-riddle' not in existing_ids:
-            data['layout'].append({"id": "card-riddle", "title": "Bilmece/Soru", "visible": True, "type": "riddle"})
+            # Migration: Ensure new cards exist in layout
+            existing_ids = [item.get('id') for item in data.get('layout', [])]
+            if 'card-riddle' not in existing_ids:
+                data['layout'].append({"id": "card-riddle", "title": "Bilmece/Soru", "visible": True, "type": "riddle"})
 
-        # Migration: Convert old flat schedule list to new group format
-        schedule = data.get('schedule', {})
-        if isinstance(schedule, list):
-            data['schedule'] = {
-                "groups": [
-                    {
-                        "name": "Varsayılan",
-                        "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-                        "items": schedule
-                    }
-                ]
-            }
-
-        return data
+            # Migration: Convert old flat schedule list to new group format
+            schedule = data.get('schedule', {})
+            if isinstance(schedule, list):
+                data['schedule'] = {
+                    "groups": [
+                        {
+                            "name": "Varsayılan",
+                            "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                            "items": schedule
+                        }
+                    ]
+                }
+            logger.info("Releasing lock for load_data.")
+            return data
+        except Exception as e:
+            logger.error(f"Exception in load_data: {e}")
+            raise
 
 
 def save_data(data):
     """Save data.json with thread safety and consistent formatting."""
+    logger.info(f"Acquiring lock {id(_data_lock)} for save_data...")
     with _data_lock:
+        logger.info("Lock acquired for save_data.")
         try:
             os.makedirs(os.path.dirname(config.DATA_FILE), exist_ok=True)
             with open(config.DATA_FILE, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
+            logger.info("Releasing lock for save_data.")
             return True
         except Exception as e:
             logger.error(f"Error saving data.json: {e}")
             return False
+
